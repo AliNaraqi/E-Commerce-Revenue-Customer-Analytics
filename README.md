@@ -32,7 +32,6 @@ and 99% on-time month to month, and late orders average 2.27 stars against 4.29
 for on-time ones.
 
 📄 **[Read the full executive summary →](reports/executive_summary.md)**
-📊 **[Open the interactive dashboard →](https://claude.ai/code/artifact/35540dfb-e73e-4ddf-a023-9d0d5373b71e)**
 
 ## 🚀 Reproduce it
 
