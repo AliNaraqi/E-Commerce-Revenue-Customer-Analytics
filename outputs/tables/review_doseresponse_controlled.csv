@@ -1,0 +1,9 @@
+bucket,adjusted_effect,orders
+15+ early,0.332,20376
+8–14 early,0.255,22941
+1–7 early,0.124,11081
+on day,0.0,826
+1–7 late,-1.276,2621
+8–14 late,-2.294,1030
+15–30 late,-2.308,755
+30+ late,-1.936,211

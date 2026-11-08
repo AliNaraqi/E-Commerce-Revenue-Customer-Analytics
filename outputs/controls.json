@@ -1,0 +1,22 @@
+{
+  "claim_1_rj_distance": {
+    "rj_avg_km": 490.17,
+    "sp_avg_km": 250.8,
+    "rj_days_300_600": 16.1,
+    "mg_days_300_600": 12.19,
+    "rj_late_pct_300_600": 13.76,
+    "mg_late_pct_300_600": 5.43
+  },
+  "claim_2_review_gap": {
+    "raw_gap": 2.019,
+    "gap_within_seller": 1.931,
+    "gap_within_seller_ci": [
+      1.894,
+      1.968
+    ],
+    "gap_within_seller_n": 59841,
+    "sellers_in_fe": 283,
+    "early_1_7_effect": 0.124,
+    "late_1_7_effect": -1.276
+  }
+}

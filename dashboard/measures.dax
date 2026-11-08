@@ -1,0 +1,187 @@
+// =============================================================================
+// measures.dax — Power BI measure definitions for the Olist analytics model
+// Paste into Power BI Desktop (Modeling -> New measure), one measure per entry.
+//
+// Every measure reproduces a number already verified in SQL. If a visual here
+// disagrees with outputs/tables/*.csv, the model is wrong, not the SQL.
+//
+// ELIGIBILITY: every sales, customer and delivery measure filters
+// fact_orders[is_eligible] = 1 (delivered orders). Keeping that filter inside
+// the measures — rather than in a report-level filter someone can remove —
+// is what stops two pages from quietly reporting different totals.
+// =============================================================================
+
+// ---------------------------------------------------------------- core volume
+Orders =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[order_id] ),
+    fact_orders[is_eligible] = 1
+)
+
+Active Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_unique_id] ),
+    fact_orders[is_eligible] = 1
+)
+
+Items Sold =
+CALCULATE (
+    COUNTROWS ( fact_order_items ),
+    fact_order_items[is_eligible] = 1
+)
+
+// ----------------------------------------------------------------------- money
+// GMV is merchandise value only. It is NOT Olist's revenue: the dataset holds
+// no commission rate, product cost or marketing spend. The visual title must
+// say "GMV", never "revenue" or "profit".
+GMV =
+CALCULATE (
+    SUM ( fact_orders[gmv] ),
+    fact_orders[is_eligible] = 1
+)
+
+Freight =
+CALCULATE (
+    SUM ( fact_orders[freight] ),
+    fact_orders[is_eligible] = 1
+)
+
+// Reported alongside GMV, never folded into it.
+Freight % of Spend =
+DIVIDE ( [Freight], [GMV] + [Freight] )
+
+AOV =
+DIVIDE ( [GMV], [Orders] )
+
+Items per Order =
+DIVIDE ( [Items Sold], [Orders] )
+
+// ------------------------------------------------------------------ time trend
+// dim_date must be marked as the model's date table
+// (Table tools -> Mark as date table -> order_date) or these return blank.
+GMV PM =
+CALCULATE ( [GMV], DATEADD ( dim_date[order_date], -1, MONTH ) )
+
+GMV MoM % =
+VAR Prev = [GMV PM]
+RETURN IF ( NOT ISBLANK ( Prev ) && Prev <> 0, DIVIDE ( [GMV] - Prev, Prev ) )
+
+GMV YTD =
+CALCULATE ( [GMV], DATESYTD ( dim_date[order_date] ) )
+
+// ------------------------------------------------------------------- customers
+Repeat Customers =
+CALCULATE (
+    DISTINCTCOUNT ( dim_customer[customer_unique_id] ),
+    dim_customer[customer_type] = "repeat"
+)
+
+Repeat Purchase Rate =
+DIVIDE ( [Repeat Customers], DISTINCTCOUNT ( dim_customer[customer_unique_id] ) )
+
+GMV per Customer =
+DIVIDE ( [GMV], [Active Customers] )
+
+// "New" = the customer's first eligible order falls in the current filter
+// context. Written against dim_customer[first_order_ts] rather than a
+// per-row flag so it re-evaluates correctly under any slicer.
+New Customers =
+CALCULATE (
+    DISTINCTCOUNT ( dim_customer[customer_unique_id] ),
+    FILTER (
+        dim_customer,
+        dim_customer[first_order_ts] >= MIN ( dim_date[order_date] )
+            && dim_customer[first_order_ts] <= MAX ( dim_date[order_date] )
+    )
+)
+
+Returning Customers = [Active Customers] - [New Customers]
+
+Returning GMV % =
+VAR ReturningGMV =
+    CALCULATE (
+        [GMV],
+        FILTER (
+            fact_orders,
+            RELATED ( dim_customer[first_order_ts] ) < MIN ( dim_date[order_date] )
+        )
+    )
+RETURN DIVIDE ( ReturningGMV, [GMV] )
+
+// ------------------------------------------------------- delivery & satisfaction
+// Denominator is orders that HAVE both timestamps. Counting a missing delivery
+// date as "late" would overstate the late rate; 8 delivered orders lack one.
+Delivered with Dates =
+CALCULATE (
+    COUNTROWS ( fact_orders ),
+    fact_orders[is_eligible] = 1,
+    NOT ISBLANK ( fact_orders[is_on_time] )
+)
+
+On-Time Orders =
+CALCULATE (
+    COUNTROWS ( fact_orders ),
+    fact_orders[is_eligible] = 1,
+    fact_orders[is_on_time] = 1
+)
+
+On-Time Rate =
+DIVIDE ( [On-Time Orders], [Delivered with Dates] )
+
+Late Orders = [Delivered with Dates] - [On-Time Orders]
+
+Late Rate = DIVIDE ( [Late Orders], [Delivered with Dates] )
+
+Avg Days to Deliver =
+CALCULATE (
+    AVERAGE ( fact_orders[days_to_deliver] ),
+    fact_orders[is_eligible] = 1
+)
+
+// Order-grain mean, matching order_review in SQL. Averaging the raw review
+// rows instead would over-weight the 547 orders carrying multiple reviews.
+Avg Review Score =
+CALCULATE (
+    AVERAGE ( fact_orders[review_score] ),
+    fact_orders[is_eligible] = 1
+)
+
+Avg Review — On Time =
+CALCULATE ( [Avg Review Score], fact_orders[is_on_time] = 1 )
+
+Avg Review — Late =
+CALCULATE ( [Avg Review Score], fact_orders[is_on_time] = 0 )
+
+// The headline gap. Descriptive association only — state, category, price and
+// seller are uncontrolled, so this is not an effect size.
+Review Gap (On Time − Late) =
+[Avg Review — On Time] - [Avg Review — Late]
+
+Low Score Rate (1–2 stars) =
+VAR Scored =
+    CALCULATE (
+        COUNTROWS ( fact_orders ),
+        fact_orders[is_eligible] = 1,
+        NOT ISBLANK ( fact_orders[review_score] )
+    )
+VAR Low =
+    CALCULATE (
+        COUNTROWS ( fact_orders ),
+        fact_orders[is_eligible] = 1,
+        fact_orders[review_score] <= 2
+    )
+RETURN DIVIDE ( Low, Scored )
+
+// --------------------------------------------------------------- concentration
+GMV Rank by Category =
+RANKX ( ALLSELECTED ( dim_product[category] ), [GMV],, DESC, DENSE )
+
+GMV % of Total =
+DIVIDE ( [GMV], CALCULATE ( [GMV], ALLSELECTED () ) )
+
+// ------------------------------------------------------------- display helpers
+// Keeps "GMV is not revenue" on the canvas itself, not only in documentation.
+GMV Caption = "GMV = merchandise value, freight excluded. Not Olist revenue."
+
+No Data Message =
+IF ( ISBLANK ( [Orders] ), "No delivered orders match the current filters." )

@@ -1,0 +1,9 @@
+segment,customers,pct_of_customers,gmv,pct_of_gmv,gmv_per_customer,avg_recency_days,avg_orders
+Promising high-value,14470,15.5,3865048.92,29.23,267.11,139.0,1.0
+At risk — high value,13809,14.79,3820964.15,28.9,276.7,442.0,1.0
+Occasional,18070,19.36,2346618.78,17.75,129.86,267.0,1.0
+Dormant,22536,24.14,1257997.99,9.51,55.82,443.0,1.0
+Recent one-time,21672,23.21,1202459.52,9.09,55.48,137.0,1.0
+Champions,931,1.0,305122.29,2.31,327.74,136.0,2.19
+Repeat — lapsing,997,1.07,248766.51,1.88,249.52,429.0,2.08
+Loyal,873,0.94,174519.95,1.32,199.91,224.0,2.07

@@ -1,0 +1,9 @@
+bucket,bucket_min_days,orders,pct_of_orders,avg_review
+15+ days early,-147.0,34939,36.22,4.323
+8-14 days early,-14.0,36364,37.69,4.311
+1-7 days early,-7.0,17341,17.98,4.201
+on estimated day,0.0,1292,1.34,4.036
+1-7 days late,1.0,3672,3.81,2.715
+8-14 days late,8.0,1478,1.53,1.672
+15-30 days late,15.0,1039,1.08,1.618
+30+ days late,31.0,345,0.36,2.056

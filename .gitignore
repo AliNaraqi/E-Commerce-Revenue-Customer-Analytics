@@ -1,0 +1,20 @@
+# Raw data — download from Kaggle, see data/README.md
+archive/
+data/raw/
+*.csv.zip
+
+# Generated artefacts
+data/*.db
+dashboard/model/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

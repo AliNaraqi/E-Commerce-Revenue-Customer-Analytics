@@ -1,0 +1,9 @@
+adjustment,gap,strata,orders
+none (raw difference),2.019,1.0,95824
+stratified by state,1.997,21.0,94978
+stratified by category,2.017,29.0,89562
+stratified by state x category,1.961,43.0,48764
+stratified by purchase month,1.98,19.0,94819
+stratified by distance x price quintile,2.006,25.0,95348
+"OLS: state+category+month FE, log price, log distance",1.964,,95348
+OLS: + seller fixed effects (within-seller),1.931,283.0,59841

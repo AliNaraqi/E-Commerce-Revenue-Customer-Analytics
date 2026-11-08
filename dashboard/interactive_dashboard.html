@@ -1,0 +1,965 @@
+<title>Olist Marketplace Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ── tokens ──────────────────────────────────────────────────────────────
+   Light is the complete set; dark redefines only values, under both the
+   media query (OS setting, un-stamped document) and the [data-theme] stamp
+   (explicit viewer choice), so either can win.
+   Series + surface hexes are the validated dataviz palette, used unchanged
+   so its colour-vision-deficiency validation still applies.            */
+:root {
+  color-scheme: light;
+  --page:        #f3f2ee;
+  --surface:     #fcfcfb;
+  --surface-2:   #f7f6f2;
+  --ink:         #0b0b0b;
+  --ink-2:       #52514e;
+  --muted:       #898781;
+  --rule:        #e1e0d9;
+  --axis:        #c3c2b7;
+  --ring:        rgba(11,11,11,.10);
+  --shadow:      0 1px 2px rgba(11,11,11,.05), 0 1px 1px rgba(11,11,11,.04);
+
+  --s1: #2a78d6;  --s2: #eb6834;  --s3: #1baf7a;
+  --s1-wash: rgba(42,120,214,.10);
+  --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --critical-wash: rgba(208,59,59,.10);
+
+  --seq-1:#cde2fb; --seq-2:#9ec5f4; --seq-3:#86b6ef; --seq-4:#6da7ec;
+  --seq-5:#3987e5; --seq-6:#2a78d6; --seq-7:#256abf; --seq-8:#1c5cab;
+  --seq-9:#184f95; --seq-10:#0d366b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#222221;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --rule:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --s1-wash: rgba(57,135,229,.14);
+    --critical:#d03b3b; --critical-wash: rgba(208,59,59,.16);
+    --seq-1:#184f95; --seq-2:#1c5cab; --seq-3:#256abf; --seq-4:#2a78d6;
+    --seq-5:#3987e5; --seq-6:#5598e7; --seq-7:#6da7ec; --seq-8:#86b6ef;
+    --seq-9:#9ec5f4; --seq-10:#cde2fb;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#222221;
+  --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+  --rule:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --shadow: 0 1px 2px rgba(0,0,0,.4);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --s1-wash: rgba(57,135,229,.14);
+  --critical:#d03b3b; --critical-wash: rgba(208,59,59,.16);
+  --seq-1:#184f95; --seq-2:#1c5cab; --seq-3:#256abf; --seq-4:#2a78d6;
+  --seq-5:#3987e5; --seq-6:#5598e7; --seq-7:#6da7ec; --seq-8:#86b6ef;
+  --seq-9:#9ec5f4; --seq-10:#cde2fb;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 400 14px/1.5 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3 { font-family: Archivo, "IBM Plex Sans", system-ui, sans-serif; margin:0; text-wrap: balance; }
+.num { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+/* ── header ─────────────────────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+.hwrap { max-width: 1240px; margin: 0 auto; padding: 16px 22px 0; }
+.hrow { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+h1 { font-size: 19px; font-weight:700; letter-spacing:-.01em; }
+.sub { color: var(--ink-2); font-size: 12.5px; margin-top: 3px; }
+.chips { display:flex; gap:7px; flex-wrap:wrap; }
+.chip {
+  font-size: 11px; padding: 4px 9px; border-radius: 3px;
+  border: 1px solid var(--ring); color: var(--ink-2); background: var(--surface-2);
+  white-space: nowrap;
+}
+.chip b { color: var(--ink); font-weight:600; }
+.chip.warn { border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+
+/* tabs */
+nav { display:flex; gap:2px; margin-top:14px; overflow-x:auto; scrollbar-width:none; }
+nav::-webkit-scrollbar { display:none; }
+nav button {
+  font: 500 13px/1 "IBM Plex Sans", sans-serif;
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  color: var(--muted); padding: 10px 13px 11px; cursor: pointer; white-space: nowrap;
+}
+nav button:hover { color: var(--ink); }
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--s1); }
+nav button:focus-visible { outline: 2px solid var(--s1); outline-offset: -2px; border-radius:3px; }
+
+/* ── layout ─────────────────────────────────────────────────────────── */
+main { max-width: 1240px; margin: 0 auto; padding: 20px 22px 60px; }
+.grid { display:grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+.c12{grid-column:span 12} .c8{grid-column:span 8} .c7{grid-column:span 7}
+.c6{grid-column:span 6} .c5{grid-column:span 5} .c4{grid-column:span 4}
+@media (max-width: 920px){ .c8,.c7,.c6,.c5,.c4{grid-column:span 12} }
+
+.card {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 15px 16px 13px; min-width: 0;
+}
+.card > header { position: static; background: none; border: 0; margin-bottom: 12px; }
+.ctitle { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+.ctitle h2 { font-size: 14.5px; font-weight: 600; letter-spacing:-.005em; }
+.q {
+  font: 600 10px/1 "IBM Plex Mono", monospace; color: var(--muted);
+  border: 1px solid var(--rule); border-radius: 3px; padding: 3px 5px;
+}
+.csub { color: var(--ink-2); font-size: 12px; margin-top: 4px; }
+
+/* KPI tiles — the only place big numbers lead */
+.kpis { display:grid; grid-template-columns: repeat(6,1fr); gap:10px; }
+@media (max-width:1040px){ .kpis{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:560px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+.kpi { background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:12px 13px; }
+.kpi .lab { font-size:10.5px; letter-spacing:.055em; text-transform:uppercase; color:var(--muted); }
+.kpi .val { font-size:22px; font-weight:600; margin-top:5px; letter-spacing:-.02em; }
+.kpi .note { font-size:11px; color:var(--ink-2); margin-top:3px; }
+.kpi.flag { border-left: 3px solid var(--critical); }
+.kpi.flag .val { color: var(--critical); }
+
+/* charts */
+.chart { position:relative; }
+svg { display:block; width:100%; height:auto; overflow:visible; }
+.gl { stroke: var(--rule); stroke-width:1; }
+.ax { stroke: var(--axis); stroke-width:1; }
+.tk { fill: var(--muted); font: 400 10.5px "IBM Plex Mono", monospace; }
+.dl { fill: var(--ink-2); font: 400 10.5px "IBM Plex Mono", monospace; }
+.mark { transition: opacity .12s; }
+.chart:hover .mark { opacity:.42; }
+.chart .mark.hot, .chart:hover .mark.hot { opacity:1; }
+
+.legend { display:flex; gap:14px; flex-wrap:wrap; margin:2px 0 9px; }
+.lg { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-2); }
+.sw { width:11px; height:11px; border-radius:2px; flex:none; }
+
+.tip {
+  position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-100%);
+  background:var(--ink); color:var(--page); border-radius:4px; padding:7px 9px;
+  font-size:11.5px; line-height:1.45; white-space:nowrap; z-index:10;
+  transition: opacity .1s; box-shadow: var(--shadow);
+}
+.tip b { font-family:"IBM Plex Mono",monospace; font-weight:600; }
+.tip.on { opacity:1; }
+
+/* tables */
+.tbtn {
+  font: 500 11px "IBM Plex Sans",sans-serif; background:none; color:var(--muted);
+  border:1px solid var(--rule); border-radius:3px; padding:3px 8px; cursor:pointer; margin-left:auto;
+}
+.tbtn:hover { color:var(--ink); border-color:var(--axis); }
+.tbtn:focus-visible { outline:2px solid var(--s1); outline-offset:1px; }
+.tw { overflow-x:auto; margin-top:10px; }
+table { border-collapse:collapse; width:100%; font-size:12px; }
+th,td { text-align:right; padding:6px 9px; border-bottom:1px solid var(--rule); white-space:nowrap; }
+th:first-child, td:first-child { text-align:left; }
+th { font:600 10.5px/1.3 "IBM Plex Sans",sans-serif; letter-spacing:.04em; text-transform:uppercase;
+     color:var(--muted); border-bottom:1px solid var(--axis); }
+tbody tr:hover { background: var(--surface-2); }
+td.n { font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; }
+tr.hl td { background: var(--critical-wash); }
+tr.hl td:first-child { font-weight:600; }
+
+.note {
+  font-size:12px; color:var(--ink-2); line-height:1.55;
+  border-left:2px solid var(--axis); padding:2px 0 2px 11px; margin-top:12px;
+}
+.note.caution { border-left-color: var(--warn); }
+.note b { color: var(--ink); font-weight:600; }
+.bignum { font-family:"IBM Plex Mono",monospace; font-weight:600; }
+
+[hidden] { display:none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+
+<header>
+  <div class="hwrap">
+    <div class="hrow">
+      <div>
+        <h1>Olist Marketplace Analytics</h1>
+        <div class="sub">96,478 delivered orders · Brazilian marketplace · Sep 2016 – Oct 2018</div>
+      </div>
+      <div class="chips">
+        <span class="chip">Basis <b>delivered orders</b></span>
+        <span class="chip">Trend window <b>2017-01 – 2018-08</b></span>
+        <span class="chip warn">GMV is merchandise value — <b>not revenue</b></span>
+      </div>
+    </div>
+    <nav role="tablist" id="tabs">
+      <button role="tab" aria-selected="true"  data-p="overview">Overview</button>
+      <button role="tab" aria-selected="false" data-p="customers">Customers</button>
+      <button role="tab" aria-selected="false" data-p="products">Products &amp; Regions</button>
+      <button role="tab" aria-selected="false" data-p="delivery">Delivery &amp; Satisfaction</button>
+      <button role="tab" aria-selected="false" data-p="evidence">Evidence &amp; Controls</button>
+    </nav>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<script>
+const D = {"kpis":{"reporting_basis":"delivered orders","trend_window":"2017-01..2018-08","orders":96478,"gmv_brl":13221498.11,"freight_brl":2198275.64,"aov_brl":137.04,"items_per_order":1.142,"freight_pct_of_spend":14.26,"active_customers":93358,"repeat_purchase_rate_pct":3.0,"on_time_pct":93.23,"late_orders":6534,"avg_days_to_deliver":12.56,"avg_review_on_time":4.291,"avg_review_late":2.272,"top5_category_gmv_pct":39.83,"top_decile_gmv_pct":41.1},"controls":{"claim_1_rj_distance":{"rj_avg_km":490.17,"sp_avg_km":250.8,"rj_days_300_600":16.1,"mg_days_300_600":12.19,"rj_late_pct_300_600":13.76,"mg_late_pct_300_600":5.43},"claim_2_review_gap":{"raw_gap":2.019,"gap_within_seller":1.931,"gap_within_seller_ci":[1.894,1.968],"gap_within_seller_n":59841,"sellers_in_fe":283,"early_1_7_effect":0.124,"late_1_7_effect":-1.276}},"monthly":[{"order_month":"2017-01","orders":750,"gmv":111798.36,"aov":149.06,"active_customers":718,"gmv_mom_pct":null},{"order_month":"2017-02","orders":1653,"gmv":234223.4,"aov":141.7,"active_customers":1630,"gmv_mom_pct":109.51},{"order_month":"2017-03","orders":2546,"gmv":359198.85,"aov":141.08,"active_customers":2508,"gmv_mom_pct":53.36},{"order_month":"2017-04","orders":2303,"gmv":340669.68,"aov":147.92,"active_customers":2274,"gmv_mom_pct":-5.16},{"order_month":"2017-05","orders":3546,"gmv":489338.25,"aov":138.0,"active_customers":3479,"gmv_mom_pct":43.64},{"order_month":"2017-06","orders":3135,"gmv":421923.37,"aov":134.58,"active_customers":3076,"gmv_mom_pct":-13.78},{"order_month":"2017-07","orders":3872,"gmv":481604.52,"aov":124.38,"active_customers":3802,"gmv_mom_pct":14.15},{"order_month":"2017-08","orders":4193,"gmv":554699.7,"aov":132.29,"active_customers":4114,"gmv_mom_pct":15.18},{"order_month":"2017-09","orders":4150,"gmv":607399.67,"aov":146.36,"active_customers":4083,"gmv_mom_pct":9.5},{"order_month":"2017-10","orders":4478,"gmv":648247.65,"aov":144.76,"active_customers":4417,"gmv_mom_pct":6.73},{"order_month":"2017-11","orders":7289,"gmv":987765.37,"aov":135.51,"active_customers":7183,"gmv_mom_pct":52.37},{"order_month":"2017-12","orders":5513,"gmv":726033.19,"aov":131.69,"active_customers":5450,"gmv_mom_pct":-26.5},{"order_month":"2018-01","orders":7069,"gmv":924645.0,"aov":130.8,"active_customers":6974,"gmv_mom_pct":27.36},{"order_month":"2018-02","orders":6555,"gmv":826437.13,"aov":126.08,"active_customers":6400,"gmv_mom_pct":-10.62},{"order_month":"2018-03","orders":7003,"gmv":953356.25,"aov":136.14,"active_customers":6914,"gmv_mom_pct":15.36},{"order_month":"2018-04","orders":6798,"gmv":973534.09,"aov":143.21,"active_customers":6744,"gmv_mom_pct":2.12},{"order_month":"2018-05","orders":6749,"gmv":977544.69,"aov":144.84,"active_customers":6693,"gmv_mom_pct":0.41},{"order_month":"2018-06","orders":6099,"gmv":856077.86,"aov":140.36,"active_customers":6061,"gmv_mom_pct":-12.43},{"order_month":"2018-07","orders":6159,"gmv":867953.46,"aov":140.92,"active_customers":6100,"gmv_mom_pct":1.39},{"order_month":"2018-08","orders":6351,"gmv":838576.64,"aov":132.04,"active_customers":6310,"gmv_mom_pct":-3.38}],"categories":[{"category":"health_beauty","gmv":1233131.72,"pct_of_gmv":9.33,"orders":8647},{"category":"watches_gifts","gmv":1166176.98,"pct_of_gmv":8.82,"orders":5495},{"category":"bed_bath_table","gmv":1023434.76,"pct_of_gmv":7.74,"orders":9272},{"category":"sports_leisure","gmv":954852.55,"pct_of_gmv":7.22,"orders":7530},{"category":"computers_accessories","gmv":888724.61,"pct_of_gmv":6.72,"orders":6530},{"category":"furniture_decor","gmv":711927.69,"pct_of_gmv":5.38,"orders":6307},{"category":"housewares","gmv":615628.69,"pct_of_gmv":4.66,"orders":5743},{"category":"cool_stuff","gmv":610204.1,"pct_of_gmv":4.62,"orders":3559},{"category":"auto","gmv":578966.65,"pct_of_gmv":4.38,"orders":3810},{"category":"toys","gmv":471286.48,"pct_of_gmv":3.56,"orders":3804},{"category":"garden_tools","gmv":470495.28,"pct_of_gmv":3.56,"orders":3448},{"category":"baby","gmv":400421.84,"pct_of_gmv":3.03,"orders":2809},{"category":"perfumery","gmv":390144.65,"pct_of_gmv":2.95,"orders":3086},{"category":"telephony","gmv":309860.23,"pct_of_gmv":2.34,"orders":4093},{"category":"office_furniture","gmv":268154.31,"pct_of_gmv":2.03,"orders":1254},{"category":"all other (59)","gmv":3128087.57,"pct_of_gmv":23.62,"orders":21889}],"states":[{"customer_state":"SP","orders":40501,"gmv":5067633.16,"pct_of_gmv":38.33,"aov":125.12,"avg_freight":17.33,"avg_days_to_deliver":8.8,"late_pct":4.49,"avg_review":4.247},{"customer_state":"RJ","orders":12350,"gmv":1759651.13,"pct_of_gmv":13.31,"aov":142.48,"avg_freight":23.95,"avg_days_to_deliver":15.3,"late_pct":12.11,"avg_review":3.965},{"customer_state":"MG","orders":11354,"gmv":1552481.83,"pct_of_gmv":11.74,"aov":136.73,"avg_freight":23.46,"avg_days_to_deliver":12.0,"late_pct":4.57,"avg_review":4.192},{"customer_state":"RS","orders":5345,"gmv":728897.47,"pct_of_gmv":5.51,"aov":136.37,"avg_freight":24.8,"avg_days_to_deliver":15.3,"late_pct":6.08,"avg_review":4.186},{"customer_state":"PR","orders":4923,"gmv":666063.51,"pct_of_gmv":5.04,"aov":135.3,"avg_freight":23.49,"avg_days_to_deliver":12.0,"late_pct":4.04,"avg_review":4.24},{"customer_state":"SC","orders":3546,"gmv":507012.13,"pct_of_gmv":3.83,"aov":142.98,"avg_freight":24.85,"avg_days_to_deliver":15.0,"late_pct":8.21,"avg_review":4.133},{"customer_state":"BA","orders":3256,"gmv":493584.14,"pct_of_gmv":3.73,"aov":151.59,"avg_freight":29.96,"avg_days_to_deliver":19.3,"late_pct":12.16,"avg_review":3.93},{"customer_state":"DF","orders":2080,"gmv":296498.41,"pct_of_gmv":2.24,"aov":142.55,"avg_freight":23.86,"avg_days_to_deliver":13.0,"late_pct":5.67,"avg_review":4.134},{"customer_state":"GO","orders":1957,"gmv":282836.7,"pct_of_gmv":2.14,"aov":144.53,"avg_freight":26.25,"avg_days_to_deliver":15.6,"late_pct":6.54,"avg_review":4.104},{"customer_state":"ES","orders":1995,"gmv":268643.45,"pct_of_gmv":2.03,"aov":134.66,"avg_freight":24.57,"avg_days_to_deliver":15.8,"late_pct":10.73,"avg_review":4.08},{"customer_state":"PE","orders":1593,"gmv":251889.49,"pct_of_gmv":1.91,"aov":158.12,"avg_freight":35.83,"avg_days_to_deliver":18.4,"late_pct":9.6,"avg_review":4.083},{"customer_state":"CE","orders":1279,"gmv":219757.38,"pct_of_gmv":1.66,"aov":171.82,"avg_freight":36.5,"avg_days_to_deliver":21.3,"late_pct":13.76,"avg_review":3.942},{"customer_state":"PA","orders":946,"gmv":174470.59,"pct_of_gmv":1.32,"aov":184.43,"avg_freight":39.7,"avg_days_to_deliver":23.8,"late_pct":11.21,"avg_review":3.91},{"customer_state":"MT","orders":886,"gmv":152191.62,"pct_of_gmv":1.15,"aov":171.77,"avg_freight":32.77,"avg_days_to_deliver":18.1,"late_pct":5.98,"avg_review":4.146},{"customer_state":"MA","orders":717,"gmv":117009.38,"pct_of_gmv":0.88,"aov":163.19,"avg_freight":42.95,"avg_days_to_deliver":21.6,"late_pct":17.43,"avg_review":3.834},{"customer_state":"MS","orders":701,"gmv":115429.97,"pct_of_gmv":0.87,"aov":164.66,"avg_freight":27.02,"avg_days_to_deliver":15.6,"late_pct":9.7,"avg_review":4.16},{"customer_state":"PB","orders":517,"gmv":112586.82,"pct_of_gmv":0.85,"aov":217.77,"avg_freight":48.84,"avg_days_to_deliver":20.4,"late_pct":10.44,"avg_review":4.076},{"customer_state":"PI","orders":476,"gmv":84721.0,"pct_of_gmv":0.64,"aov":177.99,"avg_freight":42.98,"avg_days_to_deliver":19.5,"late_pct":13.87,"avg_review":3.994},{"customer_state":"RN","orders":474,"gmv":82105.66,"pct_of_gmv":0.62,"aov":173.22,"avg_freight":39.26,"avg_days_to_deliver":19.3,"late_pct":9.28,"avg_review":4.15},{"customer_state":"AL","orders":397,"gmv":78855.72,"pct_of_gmv":0.6,"aov":198.63,"avg_freight":38.58,"avg_days_to_deliver":24.5,"late_pct":21.41,"avg_review":3.853},{"customer_state":"SE","orders":335,"gmv":56574.19,"pct_of_gmv":0.43,"aov":168.88,"avg_freight":40.94,"avg_days_to_deliver":21.5,"late_pct":15.22,"avg_review":3.907},{"customer_state":"TO","orders":274,"gmv":48402.51,"pct_of_gmv":0.37,"aov":176.65,"avg_freight":42.35,"avg_days_to_deliver":17.7,"late_pct":9.85,"avg_review":4.154},{"customer_state":"RO","orders":243,"gmv":45682.76,"pct_of_gmv":0.35,"aov":187.99,"avg_freight":46.43,"avg_days_to_deliver":19.4,"late_pct":2.88,"avg_review":4.165},{"customer_state":"AM","orders":145,"gmv":22155.84,"pct_of_gmv":0.17,"aov":152.8,"avg_freight":37.45,"avg_days_to_deliver":26.4,"late_pct":2.76,"avg_review":4.243},{"customer_state":"AC","orders":80,"gmv":15930.97,"pct_of_gmv":0.12,"aov":199.14,"avg_freight":45.55,"avg_days_to_deliver":21.0,"late_pct":3.75,"avg_review":4.088},{"customer_state":"AP","orders":67,"gmv":13374.81,"pct_of_gmv":0.1,"aov":199.62,"avg_freight":41.3,"avg_days_to_deliver":27.2,"late_pct":2.99,"avg_review":4.242},{"customer_state":"RR","orders":41,"gmv":7057.47,"pct_of_gmv":0.05,"aov":172.13,"avg_freight":48.34,"avg_days_to_deliver":29.4,"late_pct":12.2,"avg_review":3.902}],"customerType":[{"customer_type":"one-time","customers":90557,"pct_of_customers":97.0,"orders":90557,"gmv":12493089.36,"pct_of_gmv":94.49,"gmv_per_customer":137.96,"orders_per_customer":1.0,"aov":137.96},{"customer_type":"repeat","customers":2801,"pct_of_customers":3.0,"orders":5921,"gmv":728408.75,"pct_of_gmv":5.51,"gmv_per_customer":260.05,"orders_per_customer":2.11,"aov":123.02}],"rfm":[{"segment":"Promising high-value","customers":14470,"pct_of_customers":15.5,"gmv":3865048.92,"pct_of_gmv":29.23,"gmv_per_customer":267.11,"avg_recency_days":139.0,"avg_orders":1.0},{"segment":"At risk \u2014 high value","customers":13809,"pct_of_customers":14.79,"gmv":3820964.15,"pct_of_gmv":28.9,"gmv_per_customer":276.7,"avg_recency_days":442.0,"avg_orders":1.0},{"segment":"Occasional","customers":18070,"pct_of_customers":19.36,"gmv":2346618.78,"pct_of_gmv":17.75,"gmv_per_customer":129.86,"avg_recency_days":267.0,"avg_orders":1.0},{"segment":"Dormant","customers":22536,"pct_of_customers":24.14,"gmv":1257997.99,"pct_of_gmv":9.51,"gmv_per_customer":55.82,"avg_recency_days":443.0,"avg_orders":1.0},{"segment":"Recent one-time","customers":21672,"pct_of_customers":23.21,"gmv":1202459.52,"pct_of_gmv":9.09,"gmv_per_customer":55.48,"avg_recency_days":137.0,"avg_orders":1.0},{"segment":"Champions","customers":931,"pct_of_customers":1.0,"gmv":305122.29,"pct_of_gmv":2.31,"gmv_per_customer":327.74,"avg_recency_days":136.0,"avg_orders":2.19},{"segment":"Repeat \u2014 lapsing","customers":997,"pct_of_customers":1.07,"gmv":248766.51,"pct_of_gmv":1.88,"gmv_per_customer":249.52,"avg_recency_days":429.0,"avg_orders":2.08},{"segment":"Loyal","customers":873,"pct_of_customers":0.94,"gmv":174519.95,"pct_of_gmv":1.32,"gmv_per_customer":199.91,"avg_recency_days":224.0,"avg_orders":2.07}],"deciles":[{"decile":1,"customers":9336,"gmv":5434024.58,"pct_of_gmv":41.1,"cumulative_pct_of_gmv":41.1},{"decile":2,"customers":9336,"gmv":2052212.48,"pct_of_gmv":15.52,"cumulative_pct_of_gmv":56.62},{"decile":3,"customers":9336,"gmv":1462923.09,"pct_of_gmv":11.06,"cumulative_pct_of_gmv":67.69},{"decile":4,"customers":9336,"gmv":1145909.82,"pct_of_gmv":8.67,"cumulative_pct_of_gmv":76.35},{"decile":5,"customers":9336,"gmv":920254.29,"pct_of_gmv":6.96,"cumulative_pct_of_gmv":83.31},{"decile":6,"customers":9336,"gmv":730177.31,"pct_of_gmv":5.52,"cumulative_pct_of_gmv":88.84},{"decile":7,"customers":9336,"gmv":564365.95,"pct_of_gmv":4.27,"cumulative_pct_of_gmv":93.1},{"decile":8,"customers":9336,"gmv":433902.45,"pct_of_gmv":3.28,"cumulative_pct_of_gmv":96.39},{"decile":9,"customers":9335,"gmv":303650.24,"pct_of_gmv":2.3,"cumulative_pct_of_gmv":98.68},{"decile":10,"customers":9335,"gmv":174077.9,"pct_of_gmv":1.32,"cumulative_pct_of_gmv":100.0}],"newReturning":[{"order_month":"2017-01","new_customers":717,"returning_customers":1,"returning_gmv":10.9,"returning_gmv_pct":0.01},{"order_month":"2017-02","new_customers":1628,"returning_customers":2,"returning_gmv":76.12,"returning_gmv_pct":0.03},{"order_month":"2017-03","new_customers":2503,"returning_customers":5,"returning_gmv":517.79,"returning_gmv_pct":0.14},{"order_month":"2017-04","new_customers":2256,"returning_customers":18,"returning_gmv":2031.75,"returning_gmv_pct":0.6},{"order_month":"2017-05","new_customers":3451,"returning_customers":28,"returning_gmv":4379.72,"returning_gmv_pct":0.9},{"order_month":"2017-06","new_customers":3037,"returning_customers":39,"returning_gmv":4988.24,"returning_gmv_pct":1.18},{"order_month":"2017-07","new_customers":3752,"returning_customers":50,"returning_gmv":6562.13,"returning_gmv_pct":1.36},{"order_month":"2017-08","new_customers":4057,"returning_customers":57,"returning_gmv":8677.93,"returning_gmv_pct":1.56},{"order_month":"2017-09","new_customers":4004,"returning_customers":79,"returning_gmv":9616.6,"returning_gmv_pct":1.58},{"order_month":"2017-10","new_customers":4328,"returning_customers":89,"returning_gmv":11475.27,"returning_gmv_pct":1.77},{"order_month":"2017-11","new_customers":7060,"returning_customers":123,"returning_gmv":15151.31,"returning_gmv_pct":1.53},{"order_month":"2017-12","new_customers":5338,"returning_customers":112,"returning_gmv":16189.61,"returning_gmv_pct":2.23},{"order_month":"2018-01","new_customers":6842,"returning_customers":132,"returning_gmv":17911.65,"returning_gmv_pct":1.94},{"order_month":"2018-02","new_customers":6288,"returning_customers":112,"returning_gmv":13383.95,"returning_gmv_pct":1.62},{"order_month":"2018-03","new_customers":6774,"returning_customers":140,"returning_gmv":16163.86,"returning_gmv_pct":1.7},{"order_month":"2018-04","new_customers":6582,"returning_customers":162,"returning_gmv":20868.61,"returning_gmv_pct":2.14},{"order_month":"2018-05","new_customers":6506,"returning_customers":187,"returning_gmv":24404.64,"returning_gmv_pct":2.5},{"order_month":"2018-06","new_customers":5878,"returning_customers":183,"returning_gmv":25378.11,"returning_gmv_pct":2.96},{"order_month":"2018-07","new_customers":5949,"returning_customers":151,"returning_gmv":20008.9,"returning_gmv_pct":2.31},{"order_month":"2018-08","new_customers":6144,"returning_customers":166,"returning_gmv":18517.56,"returning_gmv_pct":2.21}],"repeatLatency":{"repeat_customers":2801,"avg_days_to_second_order":81.2,"pct_within_30d":50.4,"pct_within_90d":68.1,"pct_within_180d":82.7},"ontimeMonthly":[{"order_month":"2017-01","delivered_orders":750,"on_time_pct":97.07,"avg_days_to_deliver":12.6,"avg_review":4.199},{"order_month":"2017-02","delivered_orders":1653,"on_time_pct":97.04,"avg_days_to_deliver":13.2,"avg_review":4.203},{"order_month":"2017-03","delivered_orders":2546,"on_time_pct":95.44,"avg_days_to_deliver":13.0,"avg_review":4.187},{"order_month":"2017-04","delivered_orders":2303,"on_time_pct":93.44,"avg_days_to_deliver":14.9,"avg_review":4.138},{"order_month":"2017-05","delivered_orders":3545,"on_time_pct":97.01,"avg_days_to_deliver":11.3,"avg_review":4.238},{"order_month":"2017-06","delivered_orders":3135,"on_time_pct":96.97,"avg_days_to_deliver":12.0,"avg_review":4.223},{"order_month":"2017-07","delivered_orders":3872,"on_time_pct":97.21,"avg_days_to_deliver":11.6,"avg_review":4.258},{"order_month":"2017-08","delivered_orders":4193,"on_time_pct":97.09,"avg_days_to_deliver":11.1,"avg_review":4.312},{"order_month":"2017-09","delivered_orders":4150,"on_time_pct":95.61,"avg_days_to_deliver":11.9,"avg_review":4.267},{"order_month":"2017-10","delivered_orders":4478,"on_time_pct":95.82,"avg_days_to_deliver":11.9,"avg_review":4.205},{"order_month":"2017-11","delivered_orders":7288,"on_time_pct":87.6,"avg_days_to_deliver":15.2,"avg_review":3.989},{"order_month":"2017-12","delivered_orders":5513,"on_time_pct":92.54,"avg_days_to_deliver":15.4,"avg_review":4.09},{"order_month":"2018-01","delivered_orders":7069,"on_time_pct":94.3,"avg_days_to_deliver":14.1,"avg_review":4.109},{"order_month":"2018-02","delivered_orders":6555,"on_time_pct":85.87,"avg_days_to_deliver":16.9,"avg_review":3.882},{"order_month":"2018-03","delivered_orders":7003,"on_time_pct":81.04,"avg_days_to_deliver":16.3,"avg_review":3.813},{"order_month":"2018-04","delivered_orders":6798,"on_time_pct":95.5,"avg_days_to_deliver":11.5,"avg_review":4.206},{"order_month":"2018-05","delivered_orders":6749,"on_time_pct":93.44,"avg_days_to_deliver":11.4,"avg_review":4.236},{"order_month":"2018-06","delivered_orders":6096,"on_time_pct":98.84,"avg_days_to_deliver":9.2,"avg_review":4.307},{"order_month":"2018-07","delivered_orders":6156,"on_time_pct":96.62,"avg_days_to_deliver":9.0,"avg_review":4.318},{"order_month":"2018-08","delivered_orders":6351,"on_time_pct":93.81,"avg_days_to_deliver":7.7,"avg_review":4.31}],"lateness":[{"bucket":"15+ days early","bucket_min_days":-147.0,"orders":34939,"pct_of_orders":36.22,"avg_review":4.323},{"bucket":"8-14 days early","bucket_min_days":-14.0,"orders":36364,"pct_of_orders":37.69,"avg_review":4.311},{"bucket":"1-7 days early","bucket_min_days":-7.0,"orders":17341,"pct_of_orders":17.98,"avg_review":4.201},{"bucket":"on estimated day","bucket_min_days":0.0,"orders":1292,"pct_of_orders":1.34,"avg_review":4.036},{"bucket":"1-7 days late","bucket_min_days":1.0,"orders":3672,"pct_of_orders":3.81,"avg_review":2.715},{"bucket":"8-14 days late","bucket_min_days":8.0,"orders":1478,"pct_of_orders":1.53,"avg_review":1.672},{"bucket":"15-30 days late","bucket_min_days":15.0,"orders":1039,"pct_of_orders":1.08,"avg_review":1.618},{"bucket":"30+ days late","bucket_min_days":31.0,"orders":345,"pct_of_orders":0.36,"avg_review":2.056}],"reviewCross":[{"review_score":1,"on_time_orders":5886,"late_orders":3426,"pct_of_on_time":6.59,"pct_of_late":53.75},{"review_score":2,"on_time_orders":2364,"late_orders":552,"pct_of_on_time":2.65,"pct_of_late":8.66},{"review_score":3,"on_time_orders":7225,"late_orders":690,"pct_of_on_time":8.09,"pct_of_late":10.83},{"review_score":4,"on_time_orders":18217,"late_orders":651,"pct_of_on_time":20.39,"pct_of_late":10.21},{"review_score":5,"on_time_orders":55642,"late_orders":1055,"pct_of_on_time":62.29,"pct_of_late":16.55}],"ontimeVsLate":[{"delivery_outcome":"late","orders":6381,"avg_review":2.272,"pct_1_or_2_star":62.36,"pct_4_or_5_star":26.74},{"delivery_outcome":"on time","orders":89443,"avg_review":4.291,"pct_1_or_2_star":9.23,"pct_4_or_5_star":82.64}],"delaysState":[{"customer_state":"SP","delivered_orders":40494,"late_orders":1820,"late_pct":4.49,"avg_days_to_deliver":8.8,"avg_freight":17.33,"avg_review":4.247,"gmv":5066562.98},{"customer_state":"RJ","delivered_orders":12350,"late_orders":1495,"late_pct":12.11,"avg_days_to_deliver":15.3,"avg_freight":23.95,"avg_review":3.965,"gmv":1759651.13},{"customer_state":"MG","delivered_orders":11354,"late_orders":519,"late_pct":4.57,"avg_days_to_deliver":12.0,"avg_freight":23.46,"avg_review":4.192,"gmv":1552481.83},{"customer_state":"BA","delivered_orders":3256,"late_orders":396,"late_pct":12.16,"avg_days_to_deliver":19.3,"avg_freight":29.96,"avg_review":3.93,"gmv":493584.14},{"customer_state":"RS","delivered_orders":5344,"late_orders":325,"late_pct":6.08,"avg_days_to_deliver":15.3,"avg_freight":24.81,"avg_review":4.186,"gmv":728718.47},{"customer_state":"SC","delivered_orders":3546,"late_orders":291,"late_pct":8.21,"avg_days_to_deliver":15.0,"avg_freight":24.85,"avg_review":4.133,"gmv":507012.13},{"customer_state":"ES","delivered_orders":1995,"late_orders":214,"late_pct":10.73,"avg_days_to_deliver":15.8,"avg_freight":24.57,"avg_review":4.08,"gmv":268643.45},{"customer_state":"PR","delivered_orders":4923,"late_orders":199,"late_pct":4.04,"avg_days_to_deliver":12.0,"avg_freight":23.49,"avg_review":4.24,"gmv":666063.51},{"customer_state":"CE","delivered_orders":1279,"late_orders":176,"late_pct":13.76,"avg_days_to_deliver":21.3,"avg_freight":36.5,"avg_review":3.942,"gmv":219757.38},{"customer_state":"PE","delivered_orders":1593,"late_orders":153,"late_pct":9.6,"avg_days_to_deliver":18.4,"avg_freight":35.83,"avg_review":4.083,"gmv":251889.49},{"customer_state":"GO","delivered_orders":1957,"late_orders":128,"late_pct":6.54,"avg_days_to_deliver":15.6,"avg_freight":26.25,"avg_review":4.104,"gmv":282836.7},{"customer_state":"MA","delivered_orders":717,"late_orders":125,"late_pct":17.43,"avg_days_to_deliver":21.6,"avg_freight":42.95,"avg_review":3.834,"gmv":117009.38},{"customer_state":"DF","delivered_orders":2080,"late_orders":118,"late_pct":5.67,"avg_days_to_deliver":13.0,"avg_freight":23.86,"avg_review":4.134,"gmv":296498.41},{"customer_state":"PA","delivered_orders":946,"late_orders":106,"late_pct":11.21,"avg_days_to_deliver":23.8,"avg_freight":39.7,"avg_review":3.91,"gmv":174470.59},{"customer_state":"AL","delivered_orders":397,"late_orders":85,"late_pct":21.41,"avg_days_to_deliver":24.5,"avg_freight":38.58,"avg_review":3.853,"gmv":78855.72},{"customer_state":"MS","delivered_orders":701,"late_orders":68,"late_pct":9.7,"avg_days_to_deliver":15.6,"avg_freight":27.02,"avg_review":4.16,"gmv":115429.97},{"customer_state":"PI","delivered_orders":476,"late_orders":66,"late_pct":13.87,"avg_days_to_deliver":19.5,"avg_freight":42.98,"avg_review":3.994,"gmv":84721.0},{"customer_state":"PB","delivered_orders":517,"late_orders":54,"late_pct":10.44,"avg_days_to_deliver":20.4,"avg_freight":48.84,"avg_review":4.076,"gmv":112586.82},{"customer_state":"MT","delivered_orders":886,"late_orders":53,"late_pct":5.98,"avg_days_to_deliver":18.1,"avg_freight":32.77,"avg_review":4.146,"gmv":152191.62},{"customer_state":"SE","delivered_orders":335,"late_orders":51,"late_pct":15.22,"avg_days_to_deliver":21.5,"avg_freight":40.94,"avg_review":3.907,"gmv":56574.19},{"customer_state":"RN","delivered_orders":474,"late_orders":44,"late_pct":9.28,"avg_days_to_deliver":19.3,"avg_freight":39.26,"avg_review":4.15,"gmv":82105.66},{"customer_state":"TO","delivered_orders":274,"late_orders":27,"late_pct":9.85,"avg_days_to_deliver":17.7,"avg_freight":42.35,"avg_review":4.154,"gmv":48402.51},{"customer_state":"RO","delivered_orders":243,"late_orders":7,"late_pct":2.88,"avg_days_to_deliver":19.4,"avg_freight":46.43,"avg_review":4.165,"gmv":45682.76}],"delaysCategory":[{"category":"baby","delivered_orders":2751,"late_pct":8.14,"avg_days_to_deliver":12.7,"avg_review":4.123,"gmv":399850.15},{"category":"office_furniture","delivered_orders":1251,"late_pct":8.07,"avg_days_to_deliver":20.7,"avg_review":3.645,"gmv":268979.97},{"category":"electronics","delivered_orders":2503,"late_pct":7.67,"avg_days_to_deliver":12.9,"avg_review":4.13,"gmv":155368.72},{"category":"musical_instruments","delivered_orders":608,"late_pct":7.57,"avg_days_to_deliver":13.1,"avg_review":4.243,"gmv":184469.81},{"category":"health_beauty","delivered_orders":8613,"late_pct":7.54,"avg_days_to_deliver":12.1,"avg_review":4.233,"gmv":1233817.51},{"category":"bed_bath_table","delivered_orders":9175,"late_pct":7.47,"avg_days_to_deliver":13.0,"avg_review":4.008,"gmv":1023899.79},{"category":"construction_tools_construction","delivered_orders":727,"late_pct":7.43,"avg_days_to_deliver":10.9,"avg_review":4.146,"gmv":142377.81},{"category":"watches_gifts","delivered_orders":5475,"late_pct":7.42,"avg_days_to_deliver":12.8,"avg_review":4.123,"gmv":1166619.18},{"category":"auto","delivered_orders":3789,"late_pct":7.34,"avg_days_to_deliver":12.3,"avg_review":4.153,"gmv":578505.81},{"category":"unknown","delivered_orders":1361,"late_pct":7.27,"avg_days_to_deliver":12.8,"avg_review":4.043,"gmv":169642.04},{"category":"furniture_decor","delivered_orders":6194,"late_pct":7.23,"avg_days_to_deliver":13.1,"avg_review":4.078,"gmv":710566.35},{"category":"telephony","delivered_orders":4073,"late_pct":7.14,"avg_days_to_deliver":13.0,"avg_review":4.059,"gmv":309502.39}],"rjBands":[{"band":"<100km","is_rj":"RJ","orders":808,"avg_days":6.64,"late_pct":5.32},{"band":"<100km","is_rj":"all other states","orders":16987,"avg_days":6.51,"late_pct":4.44},{"band":"100\u2013300","is_rj":"RJ","orders":914,"avg_days":14.03,"late_pct":9.63},{"band":"100\u2013300","is_rj":"all other states","orders":12400,"avg_days":9.7,"late_pct":4.87},{"band":"300\u2013600","is_rj":"RJ","orders":7374,"avg_days":15.84,"late_pct":13.17},{"band":"300\u2013600","is_rj":"all other states","orders":24147,"avg_days":11.63,"late_pct":4.79},{"band":"600\u20131000","is_rj":"RJ","orders":2546,"avg_days":16.87,"late_pct":12.88},{"band":"600\u20131000","is_rj":"all other states","orders":15427,"avg_days":14.33,"late_pct":6.13},{"band":"1000\u20131800","is_rj":"RJ","orders":561,"avg_days":15.69,"late_pct":9.45},{"band":"1000\u20131800","is_rj":"all other states","orders":7833,"avg_days":17.73,"late_pct":9.04},{"band":"1800km+","is_rj":"RJ","orders":97,"avg_days":15.75,"late_pct":6.19},{"band":"1800km+","is_rj":"all other states","orders":6899,"avg_days":21.0,"late_pct":12.06}],"rjMg":[{"band":"100\u2013300","customer_state":"MG","orders":870,"avg_days":13.4,"late_pct":7.24},{"band":"100\u2013300","customer_state":"RJ","orders":507,"avg_days":16.16,"late_pct":13.21},{"band":"300\u2013600","customer_state":"MG","orders":5025,"avg_days":12.19,"late_pct":5.43},{"band":"300\u2013600","customer_state":"RJ","orders":6563,"avg_days":16.1,"late_pct":13.76},{"band":"600km+","customer_state":"MG","orders":1472,"avg_days":12.36,"late_pct":3.6},{"band":"600km+","customer_state":"RJ","orders":1036,"avg_days":17.65,"late_pct":17.08}],"gapControls":[{"adjustment":"none (raw difference)","gap":2.019,"strata":1.0,"orders":95824},{"adjustment":"stratified by state","gap":1.997,"strata":21.0,"orders":94978},{"adjustment":"stratified by category","gap":2.017,"strata":29.0,"orders":89562},{"adjustment":"stratified by state x category","gap":1.961,"strata":43.0,"orders":48764},{"adjustment":"stratified by purchase month","gap":1.98,"strata":19.0,"orders":94819},{"adjustment":"stratified by distance x price quintile","gap":2.006,"strata":25.0,"orders":95348},{"adjustment":"OLS: state+category+month FE, log price, log distance","gap":1.964,"strata":null,"orders":95348},{"adjustment":"OLS: + seller fixed effects (within-seller)","gap":1.931,"strata":283.0,"orders":59841}],"doseResponse":[{"bucket":"15+ early","adjusted_effect":0.332,"orders":20376},{"bucket":"8\u201314 early","adjusted_effect":0.255,"orders":22941},{"bucket":"1\u20137 early","adjusted_effect":0.124,"orders":11081},{"bucket":"on day","adjusted_effect":0.0,"orders":826},{"bucket":"1\u20137 late","adjusted_effect":-1.276,"orders":2621},{"bucket":"8\u201314 late","adjusted_effect":-2.294,"orders":1030},{"bucket":"15\u201330 late","adjusted_effect":-2.308,"orders":755},{"bucket":"30+ late","adjusted_effect":-1.936,"orders":211}],"eligibility":[{"basis":"delivered (reporting basis)","orders":96478,"gmv":13221498.11,"aov":137.04},{"basis":"not canceled/unavailable","orders":98199,"gmv":13494400.74,"aov":137.42},{"basis":"all statuses","orders":98666,"gmv":13591643.7,"aov":137.75}],"payment":[{"primary_payment_type":"credit_card","orders":72825,"pct_of_orders":75.48,"gmv":10431456.69,"aov":143.24,"avg_installments":3.55},{"primary_payment_type":"boleto","orders":19191,"pct_of_orders":19.89,"gmv":2329807.64,"aov":121.4,"avg_installments":1.0},{"primary_payment_type":"voucher","orders":2977,"pct_of_orders":3.09,"gmv":282230.35,"aov":94.8,"avg_installments":1.15},{"primary_payment_type":"debit_card","orders":1484,"pct_of_orders":1.54,"gmv":177868.46,"aov":119.86,"avg_installments":1.0}],"firstOrderRepeat":[{"first_experience":"first order late","customers":6353,"came_back":158,"repeat_rate_pct":2.49},{"first_experience":"first order on time","customers":86997,"came_back":2643,"repeat_rate_pct":3.04}]};
+
+/* ═══ formatting ═══════════════════════════════════════════════════════ */
+const brl = v => v >= 1e6 ? "R$" + (v/1e6).toFixed(2) + "M"
+               : v >= 1e3 ? "R$" + Math.round(v/1e3) + "k" : "R$" + v.toFixed(0);
+const brlFull = v => "R$" + Math.round(v).toLocaleString("en-US");
+const n0 = v => Math.round(v).toLocaleString("en-US");
+const pct = (v, d = 1) => v.toFixed(d) + "%";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pretty = s => String(s).replace(/_/g, " ");
+
+/* ═══ chart primitives ═════════════════════════════════════════════════
+   Hand-written SVG: every mark, tick and label placed from one scale, so
+   no label can name a value the axis doesn't reach. All colour comes from
+   CSS custom properties, so both themes resolve from the same token set. */
+
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  return Math.ceil(v / mag * 4) / 4 * mag;
+}
+/* y gridlines + labels; returns the value->pixel scale */
+function yAxis(g, max, h, w, fmt, min = 0, ticks = 5) {
+  const y = v => h - (v - min) / (max - min) * h;
+  for (let i = 0; i <= ticks; i++) {
+    const v = min + (max - min) * i / ticks;
+    el("line", { x1: 0, x2: w, y1: y(v), y2: y(v), class: i ? "gl" : "ax" }, g);
+    el("text", { x: -9, y: y(v) + 3.5, "text-anchor": "end", class: "tk" }, g).textContent = fmt(v);
+  }
+  return y;
+}
+/* shared hover plumbing: one tooltip per chart, positioned off the mark */
+function hoverable(wrap, nodes, htmlFor) {
+  const tip = document.createElement("div");
+  tip.className = "tip";
+  wrap.appendChild(tip);
+  nodes.forEach(({ node, datum, hot }) => {
+    (hot || [node]).forEach(h => h.classList.add("mark"));
+    const show = ev => {
+      tip.innerHTML = htmlFor(datum);
+      tip.classList.add("on");
+      const r = wrap.getBoundingClientRect();
+      tip.style.left = Math.max(60, Math.min(r.width - 60, ev.clientX - r.left)) + "px";
+      tip.style.top = (ev.clientY - r.top - 12) + "px";
+      (hot || [node]).forEach(h => h.classList.add("hot"));
+    };
+    node.addEventListener("pointerenter", show);
+    node.addEventListener("pointermove", show);
+    node.addEventListener("pointerleave", () => {
+      tip.classList.remove("on");
+      (hot || [node]).forEach(h => h.classList.remove("hot"));
+    });
+  });
+}
+const S = (name) => `var(--${name})`;
+
+/* ── line chart with area wash and an emphasised endpoint ─────────────── */
+function lineChart(wrap, rows, { xKey, yKey, yFmt, tip, every = 3, color = "s1",
+                                 min = 0, max = null, mark = null, h = 190 }) {
+  const w = 760, pad = { l: 56, r: 14, t: 10, b: 26 };
+  const iw = w - pad.l - pad.r, ih = h;
+  const svg = el("svg", { viewBox: `0 0 ${w} ${h + pad.t + pad.b}`, role: "img" }, wrap);
+  const g = el("g", { transform: `translate(${pad.l},${pad.t})` }, svg);
+  const hi = max ?? niceMax(Math.max(...rows.map(r => r[yKey])));
+  const y = yAxis(g, hi, ih, iw, yFmt, min);
+  const x = i => rows.length > 1 ? i / (rows.length - 1) * iw : iw / 2;
+
+  const pts = rows.map((r, i) => [x(i), y(r[yKey])]);
+  el("path", {
+    d: `M${pts.map(p => p.join(",")).join("L")}L${iw},${ih}L0,${ih}Z`,
+    fill: S(color), "fill-opacity": .09
+  }, g);
+  el("path", {
+    d: `M${pts.map(p => p.join(",")).join("L")}`, fill: "none",
+    stroke: S(color), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round"
+  }, g);
+
+  if (mark != null) {
+    el("circle", { cx: x(mark), cy: y(rows[mark][yKey]), r: 5,
+                   fill: S("critical"), stroke: S("surface"), "stroke-width": 2 }, g);
+  }
+  const last = rows.length - 1;
+  el("circle", { cx: x(last), cy: y(rows[last][yKey]), r: 4.5,
+                 fill: S(color), stroke: S("surface"), "stroke-width": 2 }, g);
+
+  // Label every nth point, plus the last — but only if the last is far enough
+  // from the previous label to not collide with it.
+  const lastLabelled = Math.floor(last / every) * every;
+  rows.forEach((r, i) => {
+    if (i % every === 0 || (i === last && last - lastLabelled >= 2))
+      el("text", { x: x(i), y: ih + 17, "text-anchor": "middle", class: "tk" }, g)
+        .textContent = r[xKey];
+  });
+
+  const nodes = rows.map((r, i) => {
+    const dot = el("circle", { cx: x(i), cy: y(r[yKey]), r: 11, fill: "transparent" }, g);
+    const vis = el("circle", { cx: x(i), cy: y(r[yKey]), r: 3.5, fill: S(color),
+                               opacity: 0, "pointer-events": "none" }, g);
+    dot.addEventListener("pointerenter", () => vis.setAttribute("opacity", 1));
+    dot.addEventListener("pointerleave", () => vis.setAttribute("opacity", 0));
+    return { node: dot, datum: r, hot: [] };
+  });
+  hoverable(wrap, nodes, tip);
+}
+
+/* ── vertical bars, optionally grouped (max 2 series) ─────────────────── */
+function barChart(wrap, rows, { xKey, series, yFmt, tip, h = 190, every = 1,
+                                colorFor = null, xRot = 0, labels = false }) {
+  const w = 760, pad = { l: 56, r: 14, t: 12, b: xRot ? 58 : 28 };
+  const iw = w - pad.l - pad.r, ih = h;
+  const svg = el("svg", { viewBox: `0 0 ${w} ${h + pad.t + pad.b}`, role: "img" }, wrap);
+  const g = el("g", { transform: `translate(${pad.l},${pad.t})` }, svg);
+  const hi = niceMax(Math.max(...rows.flatMap(r => series.map(s => r[s.key]))));
+  const y = yAxis(g, hi, ih, iw, yFmt);
+  const step = iw / rows.length, bw = Math.min(34, step * .66 / series.length);
+
+  const nodes = [];
+  rows.forEach((r, i) => {
+    const cx = step * (i + .5);
+    const hots = [];
+    series.forEach((s, si) => {
+      const off = (si - (series.length - 1) / 2) * (bw + 2);
+      const v = r[s.key], top = y(v);
+      const b = el("rect", {
+        x: cx + off - bw / 2, y: top, width: bw, height: Math.max(1, ih - top),
+        fill: colorFor ? S(colorFor(r, s)) : S(s.color), rx: 2
+      }, g);
+      hots.push(b);
+      if (labels && series.length === 1)
+        el("text", { x: cx, y: top - 5, "text-anchor": "middle", class: "dl" }, g)
+          .textContent = yFmt(v, true);
+    });
+    const hit = el("rect", { x: cx - step / 2, y: 0, width: step, height: ih, fill: "transparent" }, g);
+    nodes.push({ node: hit, datum: r, hot: hots });
+    if (i % every === 0) {
+      const tx = el("text", { x: cx, y: ih + 16, class: "tk",
+        "text-anchor": xRot ? "end" : "middle" }, g);
+      tx.textContent = r[xKey];
+      if (xRot) tx.setAttribute("transform", `rotate(-${xRot} ${cx} ${ih + 16})`);
+    }
+  });
+  hoverable(wrap, nodes, tip);
+}
+
+/* ── stacked bars with a 2px surface gap between segments ─────────────── */
+function stackChart(wrap, rows, { xKey, series, yFmt, tip, h = 190, every = 3 }) {
+  const w = 760, pad = { l: 56, r: 14, t: 12, b: 28 };
+  const iw = w - pad.l - pad.r, ih = h;
+  const svg = el("svg", { viewBox: `0 0 ${w} ${h + pad.t + pad.b}`, role: "img" }, wrap);
+  const g = el("g", { transform: `translate(${pad.l},${pad.t})` }, svg);
+  const hi = niceMax(Math.max(...rows.map(r => series.reduce((a, s) => a + r[s.key], 0))));
+  const y = yAxis(g, hi, ih, iw, yFmt);
+  const step = iw / rows.length, bw = Math.min(30, step * .64);
+
+  const nodes = [];
+  rows.forEach((r, i) => {
+    const cx = step * (i + .5);
+    let acc = 0; const hots = [];
+    series.forEach(s => {
+      const v = r[s.key], y0 = y(acc), y1 = y(acc + v);
+      hots.push(el("rect", { x: cx - bw / 2, y: y1, width: bw,
+        height: Math.max(1, y0 - y1 - (acc ? 2 : 0)), fill: S(s.color), rx: 1.5 }, g));
+      acc += v;
+    });
+    nodes.push({ node: el("rect", { x: cx - step / 2, y: 0, width: step, height: ih,
+      fill: "transparent" }, g), datum: r, hot: hots });
+    if (i % every === 0)
+      el("text", { x: cx, y: ih + 16, "text-anchor": "middle", class: "tk" }, g)
+        .textContent = r[xKey];
+  });
+  hoverable(wrap, nodes, tip);
+}
+
+/* ── horizontal bars, label outside the bar end ───────────────────────── */
+function hBarChart(wrap, rows, { yKey, xKey, xFmt, tip, colorFor = null,
+                                 rowH = 22, labelW = 150 }) {
+  const w = 760, pad = { l: labelW, r: 96, t: 4, b: 20 };
+  const iw = w - pad.l - pad.r, ih = rows.length * rowH;
+  const svg = el("svg", { viewBox: `0 0 ${w} ${ih + pad.t + pad.b}`, role: "img" }, wrap);
+  const g = el("g", { transform: `translate(${pad.l},${pad.t})` }, svg);
+  const hi = niceMax(Math.max(...rows.map(r => r[xKey])));
+  const x = v => v / hi * iw;
+
+  for (let i = 0; i <= 4; i++) {
+    const v = hi * i / 4;
+    el("line", { x1: x(v), x2: x(v), y1: 0, y2: ih, class: i ? "gl" : "ax" }, g);
+    el("text", { x: x(v), y: ih + 14, "text-anchor": "middle", class: "tk" }, g)
+      .textContent = xFmt(v, true);
+  }
+  const bh = Math.min(15, rowH - 7);
+  const nodes = rows.map((r, i) => {
+    const cy = i * rowH + rowH / 2;
+    const bar = el("rect", { x: 0, y: cy - bh / 2, width: Math.max(1, x(r[xKey])),
+      height: bh, fill: S(colorFor ? colorFor(r) : "s1"), rx: 2 }, g);
+    el("text", { x: -10, y: cy + 3.8, "text-anchor": "end", class: "dl" }, g)
+      .textContent = pretty(r[yKey]);
+    el("text", { x: x(r[xKey]) + 8, y: cy + 3.8, class: "tk" }, g)
+      .textContent = xFmt(r[xKey]);
+    const hit = el("rect", { x: -pad.l, y: cy - rowH / 2, width: w, height: rowH,
+      fill: "transparent" }, g);
+    return { node: hit, datum: r, hot: [bar] };
+  });
+  hoverable(wrap, nodes, tip);
+}
+
+/* ── diverging bars around a zero baseline ────────────────────────────── */
+function divergingChart(wrap, rows, { xKey, yKey, yFmt, tip, h = 200, xRot = 34 }) {
+  const w = 760, pad = { l: 56, r: 14, t: 18, b: 74 };
+  const iw = w - pad.l - pad.r, ih = h;
+  const svg = el("svg", { viewBox: `0 0 ${w} ${h + pad.t + pad.b}`, role: "img" }, wrap);
+  const g = el("g", { transform: `translate(${pad.l},${pad.t})` }, svg);
+  const vals = rows.map(r => r[yKey]);
+  const hi = Math.max(...vals, 0.5), lo = Math.min(...vals, 0);
+  const span = hi - lo;
+  const y = v => ih - (v - lo) / span * ih;
+  for (let i = 0; i <= 4; i++) {
+    const v = lo + span * i / 4;
+    el("line", { x1: 0, x2: iw, y1: y(v), y2: y(v), class: "gl" }, g);
+    el("text", { x: -9, y: y(v) + 3.5, "text-anchor": "end", class: "tk" }, g)
+      .textContent = v.toFixed(1);
+  }
+  el("line", { x1: 0, x2: iw, y1: y(0), y2: y(0), class: "ax" }, g);
+  const step = iw / rows.length, bw = Math.min(40, step * .62);
+
+  const nodes = rows.map((r, i) => {
+    const cx = step * (i + .5), v = r[yKey];
+    const bar = el("rect", {
+      x: cx - bw / 2, y: Math.min(y(v), y(0)), width: bw,
+      height: Math.max(1, Math.abs(y(v) - y(0))),
+      fill: S(v >= 0 ? "s1" : "critical"), rx: 2,
+      opacity: v === 0 ? 0 : 1
+    }, g);
+    // Value label always sits on the OUTER side of the bar, away from the
+    // baseline, so it never lands on the rotated category labels below.
+    el("text", { x: cx, y: v >= 0 ? y(v) - 7 : y(v) + 13, "text-anchor": "middle", class: "dl" }, g)
+      .textContent = v === 0 ? "ref" : (v > 0 ? "+" : "") + v.toFixed(2);
+    const ty = ih + 15;
+    const tx = el("text", { x: cx, y: ty, class: "tk", "text-anchor": "end" }, g);
+    tx.textContent = r[xKey];
+    tx.setAttribute("transform", `rotate(-${xRot} ${cx} ${ty})`);
+    const hit = el("rect", { x: cx - step / 2, y: 0, width: step, height: ih,
+      fill: "transparent" }, g);
+    return { node: hit, datum: r, hot: [bar] };
+  });
+  hoverable(wrap, nodes, tip);
+}
+
+/* ═══ card scaffolding ═════════════════════════════════════════════════ */
+function card(span, q, title, sub, legend) {
+  const d = document.createElement("div");
+  d.className = "card " + span;
+  d.innerHTML = `<header>
+      <div class="ctitle">${q ? `<span class="q">${q}</span>` : ""}<h2>${title}</h2></div>
+      ${sub ? `<div class="csub">${sub}</div>` : ""}
+    </header>
+    ${legend ? `<div class="legend">${legend.map(l =>
+      `<span class="lg"><span class="sw" style="background:var(--${l.c})"></span>${esc(l.t)}</span>`
+    ).join("")}</div>` : ""}
+    <div class="chart"></div>`;
+  return d;
+}
+const legendHTML = items => items.map(l =>
+  `<span class="lg"><span class="sw" style="background:var(--${l.c})"></span>${esc(l.t)}</span>`).join("");
+
+/* Accessibility: every chart ships a table view of the same numbers. */
+function withTable(cardEl, cols, rows) {
+  const head = cardEl.querySelector(".ctitle");
+  const btn = document.createElement("button");
+  btn.className = "tbtn"; btn.textContent = "Table"; btn.setAttribute("aria-expanded", "false");
+  head.appendChild(btn);
+  const tw = document.createElement("div");
+  tw.className = "tw"; tw.hidden = true;
+  tw.innerHTML = `<table><thead><tr>${cols.map(c => `<th>${esc(c.h)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${cols.map((c, i) =>
+      `<td${i ? ' class="n"' : ""}>${esc(c.f(r))}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  cardEl.appendChild(tw);
+  btn.onclick = () => {
+    tw.hidden = !tw.hidden;
+    btn.setAttribute("aria-expanded", String(!tw.hidden));
+    btn.textContent = tw.hidden ? "Table" : "Hide table";
+  };
+  return cardEl;
+}
+function kpi(lab, val, note, flag) {
+  return `<div class="kpi${flag ? " flag" : ""}"><div class="lab">${esc(lab)}</div>
+    <div class="val num">${esc(val)}</div><div class="note">${note || ""}</div></div>`;
+}
+function plainTable(cardEl, cols, rows, hlFn) {
+  const tw = document.createElement("div");
+  tw.className = "tw";
+  tw.innerHTML = `<table><thead><tr>${cols.map(c => `<th>${esc(c.h)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr${hlFn && hlFn(r) ? ' class="hl"' : ""}>${cols.map((c, i) =>
+      `<td${i ? ' class="n"' : ""}>${esc(c.f(r))}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  cardEl.appendChild(tw);
+  return cardEl;
+}
+
+/* ═══ pages ════════════════════════════════════════════════════════════ */
+const PAGES = {};
+
+PAGES.overview = () => {
+  const f = document.createDocumentFragment(), k = D.kpis;
+  const peak = D.monthly.reduce((a, r, i) => r.gmv > D.monthly[a].gmv ? i : a, 0);
+
+  const tiles = document.createElement("div");
+  tiles.className = "kpis c12";
+  tiles.style.gridColumn = "span 12";
+  tiles.innerHTML =
+      kpi("GMV", brl(k.gmv_brl), brlFull(k.gmv_brl) + " · freight excluded")
+    + kpi("Delivered orders", n0(k.orders), k.items_per_order + " items each")
+    + kpi("Average order value", "R$" + k.aov_brl.toFixed(2), "flat R$124–149 for 20 months")
+    + kpi("Active customers", n0(k.active_customers), "distinct buyers")
+    + kpi("Repeat purchase rate", pct(k.repeat_purchase_rate_pct), "≤3% ever order twice", true)
+    + kpi("On-time delivery", pct(k.on_time_pct, 1), "but 81%–99% by month");
+  f.appendChild(tiles);
+
+  const c1 = card("c12", "Q1 · Q3", "Growth stalled through 2018",
+    "Monthly merchandise value, delivered orders. Peak R$988k in 2017-11; sideways since.");
+  lineChart(c1.querySelector(".chart"), D.monthly, {
+    xKey: "order_month", yKey: "gmv", yFmt: v => brl(v), mark: peak,
+    tip: r => `<b>${r.order_month}</b><br>GMV <b>${brlFull(r.gmv)}</b><br>`
+            + `${n0(r.orders)} orders · AOV <b>R$${r.aov.toFixed(2)}</b>`
+            + (r.gmv_mom_pct != null ? `<br>MoM <b>${r.gmv_mom_pct > 0 ? "+" : ""}${r.gmv_mom_pct}%</b>` : "")
+  });
+  withTable(c1, [
+    { h: "Month", f: r => r.order_month }, { h: "Orders", f: r => n0(r.orders) },
+    { h: "GMV", f: r => brlFull(r.gmv) }, { h: "AOV", f: r => "R$" + r.aov.toFixed(2) },
+    { h: "MoM", f: r => r.gmv_mom_pct == null ? "—" : (r.gmv_mom_pct > 0 ? "+" : "") + r.gmv_mom_pct + "%" }
+  ], D.monthly);
+  f.appendChild(c1);
+
+  const c2 = card("c7", "Q1", "Order volume plateaued too",
+    "Delivered orders per month — the plateau is volume, not just basket size.");
+  barChart(c2.querySelector(".chart"), D.monthly, {
+    xKey: "order_month", series: [{ key: "orders", color: "s1" }], every: 3,
+    yFmt: v => v >= 1000 ? (v / 1000).toFixed(0) + "k" : String(Math.round(v)),
+    tip: r => `<b>${r.order_month}</b><br><b>${n0(r.orders)}</b> delivered orders<br>`
+            + `<b>${n0(r.active_customers)}</b> active customers`
+  });
+  f.appendChild(c2);
+
+  const c3 = card("c5", null, "Does the eligibility rule matter?",
+    "Delivered-only is the reporting basis. Looser bases barely move the totals.");
+  plainTable(c3, [
+    { h: "Basis", f: r => r.basis }, { h: "Orders", f: r => n0(r.orders) },
+    { h: "GMV", f: r => brl(r.gmv) }, { h: "AOV", f: r => "R$" + r.aov.toFixed(2) }
+  ], D.eligibility);
+  c3.insertAdjacentHTML("beforeend",
+    `<div class="note">The widest basis adds <b>2.8%</b> to GMV and <b>R$0.71</b> to AOV.
+     No conclusion on this dashboard depends on the choice.</div>`);
+  f.appendChild(c3);
+  return f;
+};
+
+PAGES.customers = () => {
+  const f = document.createDocumentFragment();
+  const rep = D.customerType.find(r => r.customer_type === "repeat");
+  const one = D.customerType.find(r => r.customer_type === "one-time");
+  const lat = D.repeatLatency;
+
+  const tiles = document.createElement("div");
+  tiles.className = "kpis"; tiles.style.gridColumn = "span 12";
+  tiles.innerHTML =
+      kpi("Repeat customers", n0(rep.customers), pct(rep.pct_of_customers) + " of all buyers", true)
+    + kpi("Repeat buyer value", brlFull(rep.gmv_per_customer), `vs ${brlFull(one.gmv_per_customer)} one-time`)
+    + kpi("Value multiple", (rep.gmv_per_customer / one.gmv_per_customer).toFixed(1) + "×", "from frequency, not basket")
+    + kpi("Return within 30d", pct(lat.pct_within_30d), "of those who return at all")
+    + kpi("Top decile share", pct(D.deciles[0].pct_of_gmv), "of GMV from 10% of buyers")
+    + kpi("Returning GMV", pct(D.newReturning[D.newReturning.length - 1].returning_gmv_pct, 1), "in the last full month", true);
+  f.appendChild(tiles);
+
+  const c1 = card("c12", "Q4", "Growth is new-customer acquisition, almost entirely",
+    "Monthly active customers split by whether they had ordered before.",
+    null);
+  c1.querySelector("header").insertAdjacentHTML("beforeend",
+    `<div class="legend">${legendHTML([{ c: "s1", t: "new customers" }, { c: "s2", t: "returning customers" }])}</div>`);
+  stackChart(c1.querySelector(".chart"), D.newReturning, {
+    xKey: "order_month", every: 3,
+    series: [{ key: "new_customers", color: "s1" }, { key: "returning_customers", color: "s2" }],
+    yFmt: v => v >= 1000 ? (v / 1000).toFixed(0) + "k" : String(Math.round(v)),
+    tip: r => `<b>${r.order_month}</b><br>new <b>${n0(r.new_customers)}</b><br>`
+            + `returning <b>${n0(r.returning_customers)}</b><br>`
+            + `returning share of GMV <b>${r.returning_gmv_pct}%</b>`
+  });
+  withTable(c1, [
+    { h: "Month", f: r => r.order_month }, { h: "New", f: r => n0(r.new_customers) },
+    { h: "Returning", f: r => n0(r.returning_customers) },
+    { h: "Returning GMV", f: r => brlFull(r.returning_gmv) },
+    { h: "Returning GMV %", f: r => r.returning_gmv_pct + "%" }
+  ], D.newReturning);
+  f.appendChild(c1);
+
+  const c2 = card("c7", "Q7", "The valuable segments are one-time buyers",
+    "RFM segments. Recency and monetary use quintiles; frequency uses a business rule — 97% of customers have exactly one order, so quintiles would split tied buyers arbitrarily.");
+  c2.querySelector("header").insertAdjacentHTML("beforeend",
+    `<div class="legend">${legendHTML([{ c: "s1", t: "share of GMV" }, { c: "s2", t: "share of customers" }])}</div>`);
+  const rfmSorted = [...D.rfm].sort((a, b) => b.pct_of_gmv - a.pct_of_gmv);
+  barChart(c2.querySelector(".chart"), rfmSorted, {
+    xKey: "segment", xRot: 30, h: 200,
+    series: [{ key: "pct_of_gmv", color: "s1" }, { key: "pct_of_customers", color: "s2" }],
+    yFmt: v => v.toFixed(0) + "%",
+    tip: r => `<b>${r.segment}</b><br>GMV share <b>${r.pct_of_gmv}%</b><br>`
+            + `customer share <b>${r.pct_of_customers}%</b><br>`
+            + `${brlFull(r.gmv_per_customer)} per customer · ${r.avg_orders} orders<br>`
+            + `last seen <b>${r.avg_recency_days}</b> days before data end`
+  });
+  withTable(c2, [
+    { h: "Segment", f: r => r.segment }, { h: "Customers", f: r => n0(r.customers) },
+    { h: "% cust.", f: r => r.pct_of_customers + "%" }, { h: "GMV", f: r => brl(r.gmv) },
+    { h: "% GMV", f: r => r.pct_of_gmv + "%" },
+    { h: "Per customer", f: r => brlFull(r.gmv_per_customer) },
+    { h: "Avg orders", f: r => r.avg_orders }
+  ], rfmSorted);
+  c2.insertAdjacentHTML("beforeend",
+    `<div class="note"><b>Promising high-value</b> and <b>At risk — high value</b> are both
+     single-purchase segments and together hold <b class="bignum">58%</b> of GMV. The loyal core
+     that a standard retention programme targets — Champions, Loyal, Repeat-lapsing — is
+     <b>3.0%</b> of customers and <b>5.5%</b> of GMV. The only thing separating the two big
+     blocks is recency: ~4 months versus ~14.</div>`);
+  f.appendChild(c2);
+
+  const c3 = card("c5", "Q7", "Spend is concentrated, loyalty is not",
+    "GMV share by customer spend decile (1 = highest).");
+  barChart(c3.querySelector(".chart"), D.deciles, {
+    xKey: "decile", h: 200, series: [{ key: "pct_of_gmv", color: "s1" }],
+    colorFor: r => "seq-" + (11 - r.decile),
+    yFmt: v => v.toFixed(0) + "%",
+    tip: r => `<b>Decile ${r.decile}</b><br>${n0(r.customers)} customers<br>`
+            + `GMV <b>${brl(r.gmv)}</b> (<b>${r.pct_of_gmv}%</b>)<br>`
+            + `cumulative <b>${r.cumulative_pct_of_gmv}%</b>`
+  });
+  c3.insertAdjacentHTML("beforeend",
+    `<div class="note">The top decile carries <b class="bignum">41%</b> of GMV and the top three
+     carry <b>68%</b> — but with a 3% repeat rate this reflects <b>basket size</b>, not
+     purchase frequency.</div>`);
+  f.appendChild(c3);
+  return f;
+};
+
+PAGES.products = () => {
+  const f = document.createDocumentFragment();
+  const top5 = D.categories.slice(0, 5).reduce((a, r) => a + r.pct_of_gmv, 0);
+  const sp = D.states[0];
+
+  const c1 = card("c7", "Q2", `Top 5 of 74 categories carry ${top5.toFixed(0)}% of GMV`,
+    "Merchandise value by product category. Remaining 59 categories folded into one bar.");
+  hBarChart(c1.querySelector(".chart"), D.categories, {
+    yKey: "category", xKey: "gmv", labelW: 162,
+    xFmt: (v, axis) => axis ? brl(v) : brl(v),
+    colorFor: r => r.category.startsWith("all other") ? "muted" : "s1",
+    tip: r => `<b>${pretty(r.category)}</b><br>GMV <b>${brlFull(r.gmv)}</b><br>`
+            + `<b>${r.pct_of_gmv}%</b> of total · ${n0(r.orders)} orders`
+  });
+  withTable(c1, [
+    { h: "Category", f: r => pretty(r.category) }, { h: "GMV", f: r => brlFull(r.gmv) },
+    { h: "% of GMV", f: r => r.pct_of_gmv + "%" }, { h: "Orders", f: r => n0(r.orders) }
+  ], D.categories);
+  f.appendChild(c1);
+
+  const c2 = card("c5", "Q1", `São Paulo alone is ${sp.pct_of_gmv.toFixed(0)}% of GMV`,
+    "Top 12 states of 27, by merchandise value.");
+  hBarChart(c2.querySelector(".chart"), D.states.slice(0, 12), {
+    yKey: "customer_state", xKey: "gmv", labelW: 46, rowH: 24,
+    xFmt: v => brl(v), colorFor: r => r.customer_state === "RJ" ? "s2" : "s1",
+    tip: r => `<b>${r.customer_state}</b><br>GMV <b>${brlFull(r.gmv)}</b> (<b>${r.pct_of_gmv}%</b>)<br>`
+            + `${n0(r.orders)} orders · AOV <b>R$${r.aov.toFixed(2)}</b><br>`
+            + `late <b>${r.late_pct}%</b> · review <b>${r.avg_review.toFixed(2)}</b>`
+  });
+  c2.insertAdjacentHTML("beforeend",
+    `<div class="note">The top three states are <b class="bignum">63%</b> of GMV.
+     <b style="color:var(--s2)">Rio de Janeiro</b> is highlighted — it is the second-largest
+     market and the worst-performing on delivery. See <b>Delivery &amp; Satisfaction</b>.</div>`);
+  f.appendChild(c2);
+
+  const c3 = card("c7", "Q1 · Q2", "Full state performance",
+    "All states with 200+ delivered orders, ranked by GMV.");
+  plainTable(c3, [
+    { h: "State", f: r => r.customer_state }, { h: "Orders", f: r => n0(r.orders) },
+    { h: "GMV", f: r => brl(r.gmv) }, { h: "% GMV", f: r => r.pct_of_gmv + "%" },
+    { h: "AOV", f: r => "R$" + r.aov.toFixed(0) },
+    { h: "Freight", f: r => "R$" + r.avg_freight.toFixed(0) },
+    { h: "Days", f: r => r.avg_days_to_deliver },
+    { h: "Late %", f: r => r.late_pct + "%" },
+    { h: "Review", f: r => r.avg_review == null ? "—" : r.avg_review.toFixed(2) }
+  ], D.states.filter(r => r.orders >= 200), r => r.customer_state === "RJ");
+  f.appendChild(c3);
+
+  const c4 = card("c5", null, "Payment mix",
+    "Primary payment method, by the instalment carrying most of the order value.");
+  plainTable(c4, [
+    { h: "Method", f: r => pretty(r.primary_payment_type) },
+    { h: "Orders", f: r => n0(r.orders) }, { h: "% orders", f: r => r.pct_of_orders + "%" },
+    { h: "AOV", f: r => "R$" + r.aov.toFixed(0) },
+    { h: "Avg instal.", f: r => r.avg_installments }
+  ], D.payment);
+  c4.insertAdjacentHTML("beforeend",
+    `<div class="note">Credit card dominates and carries the highest AOV — instalment buying
+     is doing real work on basket size in this market.</div>`);
+  f.appendChild(c4);
+  return f;
+};
+
+PAGES.delivery = () => {
+  const f = document.createDocumentFragment(), k = D.kpis;
+  const worst = D.ontimeMonthly.reduce((a, r, i) => r.on_time_pct < D.ontimeMonthly[a].on_time_pct ? i : a, 0);
+  const ot = D.ontimeVsLate.find(r => r.delivery_outcome === "on time");
+  const lt = D.ontimeVsLate.find(r => r.delivery_outcome === "late");
+  const rj = D.delaysState.find(r => r.customer_state === "RJ");
+  const rjShare = 100 * rj.late_orders / D.delaysState.reduce((a, r) => a + r.late_orders, 0);
+
+  const tiles = document.createElement("div");
+  tiles.className = "kpis"; tiles.style.gridColumn = "span 12";
+  tiles.innerHTML =
+      kpi("On-time rate", pct(k.on_time_pct), "annual average")
+    + kpi("Worst month", pct(D.ontimeMonthly[worst].on_time_pct, 0), D.ontimeMonthly[worst].order_month, true)
+    + kpi("Best month", pct(Math.max(...D.ontimeMonthly.map(r => r.on_time_pct)), 0), "an 18-point swing")
+    + kpi("Review — on time", ot.avg_review.toFixed(2), pct(ot.pct_4_or_5_star, 0) + " rated 4–5 stars")
+    + kpi("Review — late", lt.avg_review.toFixed(2), pct(lt.pct_1_or_2_star, 0) + " rated 1–2 stars", true)
+    + kpi("RJ share of late", pct(rjShare, 0), "from 12.8% of orders", true);
+  f.appendChild(tiles);
+
+  const c1 = card("c12", "Q5", "Reliability is a variance problem, not a level problem",
+    "A 93% annual figure conceals a monthly range of 81% to 99%.");
+  lineChart(c1.querySelector(".chart"), D.ontimeMonthly, {
+    xKey: "order_month", yKey: "on_time_pct", min: 78, max: 100, mark: worst,
+    yFmt: v => v.toFixed(0) + "%", every: 3,
+    tip: r => `<b>${r.order_month}</b><br>on time <b>${r.on_time_pct}%</b><br>`
+            + `${n0(r.delivered_orders)} orders · <b>${r.avg_days_to_deliver}</b> days avg<br>`
+            + `review <b>${r.avg_review.toFixed(2)}</b>`
+  });
+  withTable(c1, [
+    { h: "Month", f: r => r.order_month }, { h: "Orders", f: r => n0(r.delivered_orders) },
+    { h: "On-time %", f: r => r.on_time_pct + "%" },
+    { h: "Avg days", f: r => r.avg_days_to_deliver },
+    { h: "Avg review", f: r => r.avg_review.toFixed(3) }
+  ], D.ontimeMonthly);
+  c1.insertAdjacentHTML("beforeend",
+    `<div class="note">Three months — 2017-11 (Black Friday), 2018-02 and 2018-03 — carry a
+     disproportionate share of all late deliveries. The Feb–Mar 2018 collapse has no visible
+     seasonal cause in this data and is a repeatable risk until its cause is known.</div>`);
+  f.appendChild(c1);
+
+  const c2 = card("c7", "Q6", "Satisfaction falls off a cliff the moment an order is late",
+    "Mean review score by delivery timing against the promised date.");
+  c2.querySelector("header").insertAdjacentHTML("beforeend",
+    `<div class="legend">${legendHTML([{ c: "s1", t: "on or before estimate" }, { c: "critical", t: "late" }])}</div>`);
+  barChart(c2.querySelector(".chart"), D.lateness, {
+    xKey: "bucket", xRot: 34, h: 200, series: [{ key: "avg_review", color: "s1" }],
+    colorFor: r => r.bucket_min_days > 0 ? "critical" : "s1",
+    yFmt: v => v.toFixed(1), labels: true,
+    tip: r => `<b>${r.bucket}</b><br>avg review <b>${r.avg_review.toFixed(2)}</b><br>`
+            + `${n0(r.orders)} orders (<b>${r.pct_of_orders}%</b>)`
+  });
+  c2.insertAdjacentHTML("beforeend",
+    `<div class="note">4.04 on the estimated day → <b>2.71</b> at 1–7 days late. Arriving
+     15+ days early scores 4.32 against 4.20 for 1–7 days early: <b>earliness buys almost
+     nothing, lateness costs a great deal.</b></div>`);
+  f.appendChild(c2);
+
+  const c3 = card("c5", "Q6", "54% of late orders are rated 1 star",
+    "Review-score distribution within each delivery outcome.");
+  c3.querySelector("header").insertAdjacentHTML("beforeend",
+    `<div class="legend">${legendHTML([{ c: "s1", t: "on time" }, { c: "s2", t: "late" }])}</div>`);
+  barChart(c3.querySelector(".chart"), D.reviewCross, {
+    xKey: "review_score", h: 200,
+    series: [{ key: "pct_of_on_time", color: "s1" }, { key: "pct_of_late", color: "s2" }],
+    yFmt: v => v.toFixed(0) + "%",
+    tip: r => `<b>${r.review_score} star${r.review_score > 1 ? "s" : ""}</b><br>`
+            + `on time <b>${r.pct_of_on_time}%</b> (${n0(r.on_time_orders)})<br>`
+            + `late <b>${r.pct_of_late}%</b> (${n0(r.late_orders)})`
+  });
+  f.appendChild(c3);
+
+  const c4 = card("c7", "Q5", "Where delays concentrate",
+    "Ranked by absolute late orders — a high rate on a tiny base matters less operationally.");
+  plainTable(c4, [
+    { h: "State", f: r => r.customer_state }, { h: "Delivered", f: r => n0(r.delivered_orders) },
+    { h: "Late", f: r => n0(r.late_orders) }, { h: "Late %", f: r => r.late_pct + "%" },
+    { h: "Avg days", f: r => r.avg_days_to_deliver },
+    { h: "Freight", f: r => "R$" + r.avg_freight.toFixed(0) },
+    { h: "Review", f: r => r.avg_review.toFixed(2) }
+  ], D.delaysState.slice(0, 12), r => r.customer_state === "RJ");
+  c4.insertAdjacentHTML("beforeend",
+    `<div class="note"><b>Rio de Janeiro</b> produces <b class="bignum">${rjShare.toFixed(0)}%</b>
+     of all late deliveries from <b>12.8%</b> of orders. Whether distance explains that is tested
+     on the <b>Evidence &amp; Controls</b> tab — it does not.</div>`);
+  f.appendChild(c4);
+
+  const c5 = card("c5", "Q5", "Delays by category",
+    "Order assigned to the category holding most of its item value. 500+ orders.");
+  plainTable(c5, [
+    { h: "Category", f: r => pretty(r.category) }, { h: "Orders", f: r => n0(r.delivered_orders) },
+    { h: "Late %", f: r => r.late_pct + "%" }, { h: "Days", f: r => r.avg_days_to_deliver },
+    { h: "Review", f: r => r.avg_review.toFixed(2) }
+  ], D.delaysCategory, r => r.category === "office_furniture");
+  c5.insertAdjacentHTML("beforeend",
+    `<div class="note">Category spread is narrow (4%–8%), so lateness is a <b>geography and
+     carrier</b> problem, not a product one. The outlier is <b>office furniture</b>: 20.7 days
+     against a 12.6-day mean, and the lowest review score in the table.</div>`);
+  f.appendChild(c5);
+  return f;
+};
+
+PAGES.evidence = () => {
+  const f = document.createDocumentFragment();
+  const c = D.controls;
+
+  const intro = document.createElement("div");
+  intro.className = "card c12";
+  intro.innerHTML = `<header><div class="ctitle"><h2>Two claims that description alone could not settle</h2></div>
+    <div class="csub">Both findings were first reported with caveats instead of evidence. This tab
+    is the test of each — including one that corrected the original wording.</div></header>
+    <div class="note caution"><b>These tests are observational.</b> Controls remove <i>observed</i>
+    confounders; they cannot rule out an unobserved one. Reverse causation is implausible here —
+    a review cannot retro-date a delivery — which is why the delivery result is reported as a
+    robust association rather than merely suggestive. It is still not a randomised effect estimate.</div>`;
+  f.appendChild(intro);
+
+  const c1 = card("c7", "Claim 1", "Is Rio de Janeiro slow because it is far?",
+    "Average delivery days by seller-to-customer distance band, computed from zip-prefix centroids in the geolocation table.");
+  c1.querySelector("header").insertAdjacentHTML("beforeend",
+    `<div class="legend">${legendHTML([{ c: "s1", t: "all other states" }, { c: "s2", t: "Rio de Janeiro" }])}</div>`);
+  const bands = [...new Set(D.rjBands.map(r => r.band))];
+  const bandRows = bands.map(b => {
+    const rjr = D.rjBands.find(r => r.band === b && r.is_rj === "RJ") || {};
+    const otr = D.rjBands.find(r => r.band === b && r.is_rj === "all other states") || {};
+    return { band: b, rj_days: rjr.avg_days ?? 0, other_days: otr.avg_days ?? 0,
+             rj_late: rjr.late_pct ?? 0, other_late: otr.late_pct ?? 0,
+             rj_n: rjr.orders ?? 0, other_n: otr.orders ?? 0 };
+  });
+  barChart(c1.querySelector(".chart"), bandRows, {
+    xKey: "band", xRot: 26, h: 200,
+    series: [{ key: "other_days", color: "s1" }, { key: "rj_days", color: "s2" }],
+    yFmt: v => v.toFixed(0),
+    tip: r => `<b>${r.band}</b><br>other states <b>${r.other_days}</b> days `
+            + `(${r.other_late}% late)<br>Rio de Janeiro <b>${r.rj_days}</b> days `
+            + `(${r.rj_late}% late)<br><span style="opacity:.7">RJ n=${n0(r.rj_n)}</span>`
+  });
+  c1.insertAdjacentHTML("beforeend",
+    `<div class="note"><b>The original claim was wrong in its wording and right in its
+     conclusion.</b> RJ orders average <b class="bignum">${c.claim_1_rj_distance.rj_avg_km.toFixed(0)}km</b>
+     against São Paulo's <b class="bignum">${c.claim_1_rj_distance.sp_avg_km.toFixed(0)}km</b> — RJ
+     genuinely <i>is</i> further, so "comparable distances" was false. Banding by distance instead:
+     RJ matches the national field under 100km (<b>6.6 vs 6.5</b> days) and falls behind from
+     100km out. <i>In the 1000km+ bands RJ is faster, but those hold under 700 RJ orders between
+     them; 88% of RJ volume sits in the 100–1000km range where RJ trails.</i></div>`);
+  f.appendChild(c1);
+
+  const c2 = card("c5", "Claim 1", "Same sellers, same distance, different destination",
+    "São Paulo sellers only — holding origin constant as well as distance. RJ against Minas Gerais.");
+  c2.querySelector("header").insertAdjacentHTML("beforeend",
+    `<div class="legend">${legendHTML([{ c: "s1", t: "Minas Gerais" }, { c: "s2", t: "Rio de Janeiro" }])}</div>`);
+  const mgBands = [...new Set(D.rjMg.map(r => r.band))].map(b => {
+    const r1 = D.rjMg.find(r => r.band === b && r.customer_state === "MG") || {};
+    const r2 = D.rjMg.find(r => r.band === b && r.customer_state === "RJ") || {};
+    return { band: b, mg: r1.avg_days ?? 0, rj: r2.avg_days ?? 0,
+             mg_late: r1.late_pct ?? 0, rj_late: r2.late_pct ?? 0 };
+  });
+  barChart(c2.querySelector(".chart"), mgBands, {
+    xKey: "band", h: 200, series: [{ key: "mg", color: "s1" }, { key: "rj", color: "s2" }],
+    yFmt: v => v.toFixed(0),
+    tip: r => `<b>${r.band}</b><br>Minas Gerais <b>${r.mg}</b> days (${r.mg_late}% late)<br>`
+            + `Rio de Janeiro <b>${r.rj}</b> days (${r.rj_late}% late)`
+  });
+  c2.insertAdjacentHTML("beforeend",
+    `<div class="note">At 300–600km from the same São Paulo sellers, RJ takes
+     <b class="bignum">${c.claim_1_rj_distance.rj_days_300_600}</b> days at a
+     <b>${c.claim_1_rj_distance.rj_late_pct_300_600}%</b> late rate, against MG's
+     <b class="bignum">${c.claim_1_rj_distance.mg_days_300_600}</b> days and
+     <b>${c.claim_1_rj_distance.mg_late_pct_300_600}%</b>. A <b>destination-side</b> problem —
+     line-haul or regional carrier handoff — not geography and not seller mix.</div>`);
+  f.appendChild(c2);
+
+  const c3 = card("c7", "Claim 2", "The review gap barely moves under any control",
+    "Review-score difference between on-time and late orders, under progressively stricter adjustment.");
+  hBarChart(c3.querySelector(".chart"), D.gapControls, {
+    yKey: "adjustment", xKey: "gap", labelW: 268, rowH: 26,
+    xFmt: v => v.toFixed(2),
+    colorFor: r => r.adjustment.includes("seller fixed") ? "s3" : "s1",
+    tip: r => `<b>${r.adjustment}</b><br>gap <b>${r.gap}</b> points<br>`
+            + (r.strata ? `${n0(r.strata)} strata · ` : "") + `${n0(r.orders)} orders`
+  });
+  c3.insertAdjacentHTML("beforeend",
+    `<div class="note">The strictest test compares <b>the same seller's</b> on-time and late
+     orders, within the same state, category and month, at similar price and distance:
+     <b class="bignum">−${c.claim_2_review_gap.gap_within_seller}</b> points
+     (95% CI −${c.claim_2_review_gap.gap_within_seller_ci[1]} to
+     −${c.claim_2_review_gap.gap_within_seller_ci[0]}), across
+     <b>${n0(c.claim_2_review_gap.gap_within_seller_n)}</b> orders from
+     <b>${c.claim_2_review_gap.sellers_in_fe}</b> sellers. Geography, product mix and seller
+     quality do <b>not</b> explain the gap.</div>`);
+  f.appendChild(c3);
+
+  const c4 = card("c5", "Claim 2", "Earliness buys +0.12; one week late costs −1.28",
+    "Adjusted effect on review score versus delivery on the estimated day, with all controls and seller fixed effects.");
+  divergingChart(c4.querySelector(".chart"), D.doseResponse, {
+    xKey: "bucket", yKey: "adjusted_effect", h: 190,
+    tip: r => `<b>${r.bucket}</b><br>adjusted effect <b>${r.adjusted_effect > 0 ? "+" : ""}`
+            + `${r.adjusted_effect}</b><br>${n0(r.orders)} orders`
+  });
+  c4.insertAdjacentHTML("beforeend",
+    `<div class="note">Roughly a <b class="bignum">10:1</b> asymmetry. Padding delivery
+     estimates protects against the penalty; it does not itself generate satisfaction.</div>`);
+  f.appendChild(c4);
+
+  const c5 = card("c12", null, "What this evidence does and does not support", null);
+  c5.querySelector(".chart").remove();
+  plainTable(c5, [
+    { h: "Claim", f: r => r[0] }, { h: "Status", f: r => r[1] }, { h: "Evidence", f: r => r[2] }
+  ], [
+    ["RJ delays are not explained by distance", "Supported, wording corrected",
+     "Within-band and same-origin comparisons; RJ is further than SP, but still 4–5 days slower at equal distance"],
+    ["Late delivery associates with ~2 fewer stars", "Supported, robust",
+     "−1.93 within-seller (95% CI −1.97 to −1.89), n=59,841"],
+    ["Late delivery causes lower scores", "Not established",
+     "Observational; no randomisation, unobserved confounders possible"],
+    ["Fixing lateness would add ~2 stars", "Not established",
+     "A controlled association is not an effect estimate"],
+    ["Repeat rate is 3%", "Lower bound only",
+     "~21-month window censors customers acquired late in the period"]
+  ]);
+  f.appendChild(c5);
+  return f;
+};
+
+/* ═══ routing ══════════════════════════════════════════════════════════ */
+const app = document.getElementById("app");
+function render(p) {
+  app.innerHTML = "";
+  const g = document.createElement("div");
+  g.className = "grid";
+  g.appendChild(PAGES[p]());
+  app.appendChild(g);
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-p]");
+  if (!b) return;
+  [...e.currentTarget.children].forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  render(b.dataset.p);
+});
+render("overview");
+</script>

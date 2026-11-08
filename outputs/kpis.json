@@ -1,0 +1,19 @@
+{
+  "reporting_basis": "delivered orders",
+  "trend_window": "2017-01..2018-08",
+  "orders": 96478,
+  "gmv_brl": 13221498.11,
+  "freight_brl": 2198275.64,
+  "aov_brl": 137.04,
+  "items_per_order": 1.142,
+  "freight_pct_of_spend": 14.26,
+  "active_customers": 93358,
+  "repeat_purchase_rate_pct": 3.0,
+  "on_time_pct": 93.23,
+  "late_orders": 6534,
+  "avg_days_to_deliver": 12.56,
+  "avg_review_on_time": 4.291,
+  "avg_review_late": 2.272,
+  "top5_category_gmv_pct": 39.83,
+  "top_decile_gmv_pct": 41.1
+}
