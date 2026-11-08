@@ -195,8 +195,7 @@ seller mix.
 │   ├── interactive_dashboard.html # published interactive dashboard
 │   ├── measures.dax              # 38 Power BI measures
 │   ├── powerbi_build_guide.md    # model, relationships, pages, validation
-│   ├── model/                    # generated star schema (not committed)
-│   └── screenshots/              # empty — see Power BI status
+│   └── model/                    # generated star schema (not committed)
 ├── reports/
 │   └── executive_summary.md      # findings + recommendations
 └── requirements.txt
